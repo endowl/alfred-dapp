@@ -26,8 +26,11 @@
 @import "../iconsmind/iconsmind.css";
 @import "variables";
 
-// @import 'themes/lite-blue';
+//@import "themes/lite-blue.scss";
 @import "themes/lite-purple.scss";
 @import "~bootstrap/scss/bootstrap.scss";
 @import "bootstrap-rtl.scss";
 @import "globals/globals";
+
+@import "~crypto-icons/styles.css";
+@import "~crypto-icons/font.css";
