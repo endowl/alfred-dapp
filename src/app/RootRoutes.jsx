@@ -19,6 +19,7 @@ import taskManagerRoutes from "./views/app/task-manager/taskManagerRoutes";
 import ecommerceRoutes from "./views/app/ecommerce/ecommerceRoutes";
 import contactRoutes from "./views/app/contact/contactRoutes";
 import dappRoutes from "./views/dapp/dappRoutes";
+import canvasRoutes from "./views/canvas/canvasRoutes";
 
 const redirectRoute = [
   {
@@ -40,7 +41,7 @@ const routes = [
     path: "/",
     component: AuthGuard,
     routes: [
-        ...dappRoutes,
+      ...dappRoutes,
       ...dashboardRoutes,
       ...uiKitsRoutes,
       ...formsRoutes,
@@ -58,7 +59,8 @@ const routes = [
       ...ecommerceRoutes,
       ...contactRoutes,
       ...redirectRoute,
-      ...errorRoute
+      ...errorRoute,
+      ...canvasRoutes,
     ]
   }
 ];
