@@ -4,6 +4,8 @@ function LinkEtherscanAddress(props) {
     let url = "https://etherscan.io/address/" + props.address;
     if (props.chainId === "3") {
         url = "https://ropsten.etherscan.io/address/" + props.address;
+    } else if (props.chainId === "42") {
+        url = "https://kovan.etherscan.io/address/" + props.address;
     }
     // TODO Add other networks
     return (

@@ -5,29 +5,8 @@ import EthereumDapp from "./EthereumDapp";
 import {Alert} from "react-bootstrap";
 import { ethers } from 'ethers';
 import bringOutYourDeadFactoryAbi from "../../../abi/bringOutYourDeadFactoryAbi";
-
-function LinkEtherscanTx(props) {
-    let txHashUrl = "https://etherscan.io/tx/" + props.txHash;
-    if (props.chainId === "3") {
-        txHashUrl = "https://ropsten.etherscan.io/tx/" + props.txHash;
-    }
-    // TODO Add other networks
-    return (
-        <a href={txHashUrl} target="_blank" title={props.txHash}><Fragment>{props.children}</Fragment></a>
-    )
-}
-
-function LinkEtherscanAddress(props) {
-    let url = "https://etherscan.io/address/" + props.address;
-    if (props.chainId === "3") {
-        url = "https://ropsten.etherscan.io/address/" + props.address;
-    }
-    // TODO Add other networks
-    return (
-        <a href={url} target="_blank" title={props.address}><Fragment>{props.children}</Fragment></a>
-    )
-}
-
+import LinkEtherscanAddress from './LinkEtherscanAddress';
+import LinkEtherscanTx from './LinkEtherscanTx';
 
 function NewEstateForm() {
     const wallet = useWallet();
@@ -37,9 +16,12 @@ function NewEstateForm() {
     const [oracle, setOracle] = useState('');
     const [executor, setExecutor] = useState('');
 
-    // TODO: Move this to a config file
+    // TODO: Automatically set chainID used in LinkEtherscanAddress components to the current network
+
+    // TODO: Move this to a config file and support multiple networks
     // const boydFactoryAddress = "0xDEAD78Ed0A13909CB8F6919E32308515373e6d2d";
-    const boydFactoryAddress = "0x0bBc6D455611718aFA0Db939d1C41ABe283ECc8F";
+    // const boydFactoryAddress = "0x0bBc6D455611718aFA0Db939d1C41ABe283ECc8F";  // Ropsten
+    const boydFactoryAddress = "0xc1A8436f6f0a98346b01B8E855E0BdF9a26e1453";  // Kovan
 
     const statuses = {
         PROMPTING: 'prompting',
@@ -137,7 +119,7 @@ function NewEstateForm() {
                     Transaction submitted
                 </Alert.Heading>
                 <p>
-                    Your transaction has been sent and is pending inclusion in the blockchain. You may <LinkEtherscanTx txHash={txHash} chainId="3">follow the transaction on Etherscan.</LinkEtherscanTx>
+                    Your transaction has been sent and is pending inclusion in the blockchain. You may <LinkEtherscanTx txHash={txHash} chainId="42">follow the transaction on Etherscan.</LinkEtherscanTx>
                 </p>
             </Alert>
             <Alert variant="success" show={status === statuses.SUCCESS}>
@@ -145,7 +127,7 @@ function NewEstateForm() {
                     Your digital estate has been established on the blockchain!
                 </Alert.Heading>
                 <p>
-                    The smart contract's address is <strong><LinkEtherscanAddress address={estateAddress} chainId="3">{estateAddress}</LinkEtherscanAddress></strong>
+                    The smart contract's address is <strong><LinkEtherscanAddress address={estateAddress} chainId="42">{estateAddress}</LinkEtherscanAddress></strong>
                 </p>
             </Alert>
             <Alert variant="danger" show={status === statuses.ERROR}>
@@ -153,7 +135,7 @@ function NewEstateForm() {
                     There was a problem creating the smart contract.
                 </Alert.Heading>
                 <p>
-                    You may be able to find out more information by <LinkEtherscanTx txHash={txHash} chainId="3">investigating the transaction on Etherscan.</LinkEtherscanTx>
+                    You may be able to find out more information by <LinkEtherscanTx txHash={txHash} chainId="42">investigating the transaction on Etherscan.</LinkEtherscanTx>
                 </p>
             </Alert>
 
