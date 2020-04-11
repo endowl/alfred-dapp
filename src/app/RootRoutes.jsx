@@ -42,6 +42,7 @@ const routes = [
     component: AuthGuard,
     routes: [
       ...dappRoutes,
+      ...canvasRoutes,
       ...dashboardRoutes,
       ...uiKitsRoutes,
       ...formsRoutes,
@@ -60,7 +61,6 @@ const routes = [
       ...contactRoutes,
       ...redirectRoute,
       ...errorRoute,
-      ...canvasRoutes,
     ]
   }
 ];
