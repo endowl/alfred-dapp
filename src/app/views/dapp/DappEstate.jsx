@@ -3,9 +3,50 @@ import { Breadcrumb, SimpleCard, CodeViewer } from "@gull";
 import { useWallet } from "use-wallet";
 import EthereumDapp from "./EthereumDapp";
 import {Alert} from "react-bootstrap";
+import { Modal, Button } from "react-bootstrap";
 import { ethers } from 'ethers';
 import bringOutYourDeadAbi from "../../../abi/bringOutYourDeadAbi";
 import LinkEtherscanAddress from './LinkEtherscanAddress';
+
+
+function EditExecutor(props) {
+    const [show, setShow] = useState(false);
+
+    const handleClose = () => {
+        setShow(false);
+    };
+
+    // TODO: Handle form submission, submit transaction, monitor and display tx status
+
+    return (
+        <Fragment>
+            <Button className="text-capitalize" onClick={() => setShow(true)}>
+                Edit
+            </Button>
+        <Modal show={show} onHide={() => handleClose()} {...props}>
+            <Modal.Header closeButton>
+                <Modal.Title>Change Executor</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+                <p>
+                    Address of the executor for the estate
+                </p>
+                <input type="text" name="executorInput" value="" class="form-control"/>
+            </Modal.Body>
+            <Modal.Footer>
+                <Button variant="secondary" onClick={() => handleClose()}>
+                    Close
+                </Button>
+                <Button variant="primary" onClick={() => alert("todo")}>
+                    Save Changes
+                </Button>
+            </Modal.Footer>
+
+        </Modal>
+        </Fragment>
+    );
+}
+
 
 function DappEstate(props) {
     const wallet = useWallet();
@@ -16,12 +57,16 @@ function DappEstate(props) {
 
     async function update() {
         try {
-            // let owner = await estateContract.owner();
             setOwner(await estateContract.owner());
+            setExecutor(await estateContract.executor());
         } catch (e) {
             console.log("Failed to read 'owner' property, probably a bad address/ENS name");
             return;
         }
+    }
+
+    async function handleChangeExecutor() {
+        // TODO
     }
 
     if(wallet.connected) {
@@ -64,13 +109,16 @@ function DappEstate(props) {
                     </SimpleCard>
                     {owner && (
                         <SimpleCard title="Estate Details" className="mb-4">
-                            <p>
+                            <div>
                                 Owner: <LinkEtherscanAddress address={owner}>{owner}</LinkEtherscanAddress>
-                            </p>
-                            <p>
-                                Executor: <LinkEtherscanAddress address={executor}>{executor}</LinkEtherscanAddress>
-                                <a onClick=""><i className="i-Edit"></i></a>
-                            </p>
+                            </div>
+                            <div>
+                                Executor:
+                                <span>
+                                    <LinkEtherscanAddress address={executor}>{executor}</LinkEtherscanAddress>
+                                    <EditExecutor executor={executor}/>
+                                </span>
+                            </div>
                         </SimpleCard>
                     )}
                 </div>

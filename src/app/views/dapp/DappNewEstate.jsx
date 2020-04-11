@@ -52,7 +52,6 @@ function NewEstateForm() {
         event.preventDefault();
         console.log(wallet);
 
-        // const zeroAddress = "0x0000000000000000000000000000000000000000";
         const oracleParam = oracle !== '' ? oracle : ethers.constants.AddressZero;
         const executorParam = oracle !== '' ? oracle : ethers.constants.AddressZero;
 
@@ -74,7 +73,7 @@ function NewEstateForm() {
             return;
         }
 
-        // User approved transaction
+        // User approved the transaction
         console.log(tx);
         setTxHash(tx.hash);
         setStatus(statuses.PROCESSING);
@@ -82,21 +81,16 @@ function NewEstateForm() {
         // Wait for transaction to complete
         let receipt = await tx.wait(1);
 
-        // Get contract address from events
+        // Get new estate contract address from transaction events
         let address = receipt.events[1].args['estate'].substr(-40);
         address = ethers.utils.getAddress(address);
         console.log(address);
-
-        console.log(receipt.events);
-
-        // Transaction is complete
-        console.log(receipt);
-
         setEstateAddress(address);
 
-        // TODO: Replace with actual address of newly deployed estate contract
-        // setEstateAddress("0xdac3794d1644D7cE73d098C19f33E7e10271b2bC");
+        // console.log(receipt.events);
+        // console.log(receipt);
 
+        // Transaction is complete
         setStatus(statuses.SUCCESS);
     }
 
