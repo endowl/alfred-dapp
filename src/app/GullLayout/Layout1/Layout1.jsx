@@ -34,29 +34,29 @@ class Layout1 extends Component {
     let { settings, routes } = this.props;
 
     return (
-      <div>
-        <div className={`app-admin-wrap layout-sidebar-large`}>
-          <Layout1Header></Layout1Header>
-          <Layout1Sidenav />
-          {/* sidebar */}
+            <div>
+                <div className={`app-admin-wrap layout-sidebar-large`}>
+                    <Layout1Header></Layout1Header>
+                    <Layout1Sidenav/>
+                    {/* sidebar */}
 
-          <div
-            className={classList({
-              "main-content-wrap d-flex flex-column": true,
-              "sidenav-open": settings.layout1Settings.leftSidebar.open
-            })}
-          >
-            <Suspense fallback={<Loading />}>
-              <div className="main-content">{renderRoutes(routes)}</div>
-            </Suspense>
-            {(settings.footer.show && <Footer></Footer>)}
-          </div>
-        </div>
-        <GullSearch
-          open={settings.layout1Settings.searchBox.open}
-          handleClose={this.handleSearchBoxClose}
-        ></GullSearch>
-      </div>
+                    <div
+                        className={classList({
+                            "main-content-wrap d-flex flex-column": true,
+                            "sidenav-open": settings.layout1Settings.leftSidebar.open
+                        })}
+                    >
+                        <Suspense fallback={<Loading/>}>
+                            <div className="main-content">{renderRoutes(routes)}</div>
+                        </Suspense>
+                        {(settings.footer.show && <Footer></Footer>)}
+                    </div>
+                </div>
+                <GullSearch
+                    open={settings.layout1Settings.searchBox.open}
+                    handleClose={this.handleSearchBoxClose}
+                ></GullSearch>
+            </div>
     );
   }
 }
