@@ -1,5 +1,4 @@
 import React, { Component, Fragment } from "react";
-import { Link } from "react-router-dom";
 
 class Stake extends Component {
   state = {
@@ -16,14 +15,14 @@ class Stake extends Component {
       }
     ],
     stakeDai: [
-        {
-            leftIcon: "i-Money-2",
-            leftTitle: "120",
-            leftSubtitle: "expense",
-            rightIcon: "i-Financial",
-            rightTitle: "4021",
-            rightSubtitle: "sales"
-        }
+      {
+        leftIcon: "i-Money-2",
+        leftTitle: "120",
+        leftSubtitle: "staked",
+        rightIcon: "i-Financial",
+        rightTitle: "4021",
+        rightSubtitle: "interest funded"
+      }
     ]
   };
 
@@ -47,6 +46,40 @@ class Stake extends Component {
                     </p>
                   </div>
                 </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="row">
+          {stakeDai.map((card, index) => (
+            <div key={index} className="col-lg-3 col-md-6 col-sm-6">
+              <div className="card card-icon-bg card-icon-bg-primary o-hidden mb-4">
+
+                <div className="card-body text-center">
+                  <i className={card.leftIcon}></i>
+                  <div className="content">
+                    <p className="text-muted mt-2 mb-0 text-capitalize">
+                      {card.leftSubtitle}
+                    </p>
+                    <p className="lead text-primary text-24 mb-2 text-capitalize">
+                      {card.leftTitle}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="card-body text-center">
+                  <i className={card.rightIcon}></i>
+                  <div className="content">
+                    <p className="text-muted mt-2 mb-0 text-capitalize">
+                      {card.rightSubtitle}
+                    </p>
+                    <p className="lead text-primary text-24 mb-2 text-capitalize">
+                      {card.rightTitle}
+                    </p>
+                  </div>
+                </div>
+
               </div>
             </div>
           ))}
