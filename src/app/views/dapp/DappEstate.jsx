@@ -117,10 +117,14 @@ function DappEstate(props) {
                             </div>
                             <div>
                                 Executor:
-                                <span>
-                                    <LinkEtherscanAddress address={executor}>{executor}</LinkEtherscanAddress>
-                                    <EditExecutor executor={executor}/>
-                                </span>
+                                {executor === ethers.constants.AddressZero ? (
+                                    <span> (None) </span>
+                                ) : (
+                                    <span>
+                                        <LinkEtherscanAddress address={executor}>{executor}</LinkEtherscanAddress>
+                                    </span>
+                                )}
+                                <EditExecutor executor={executor}/>
                             </div>
                         </SimpleCard>
                     )}
