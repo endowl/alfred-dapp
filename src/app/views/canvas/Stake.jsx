@@ -2,83 +2,52 @@ import React, { Component, Fragment } from "react";
 
 class Stake extends Component {
   state = {
-    cardList1: [
-      {
-        icon: "i-Financial",
-        title: "4021",
-        subtitle: "sales"
-      },
-      {
-        icon: "i-Money-2",
-        title: "120",
-        subtitle: "expense"
-      }
-    ],
     stakeDai: [
       {
         leftIcon: "i-Money-2",
-        leftTitle: "120",
+        leftTitle: "120.00",
         leftSubtitle: "staked",
         rightIcon: "i-Financial",
-        rightTitle: "4021",
+        rightTitle: "4.0210",
         rightSubtitle: "interest funded"
       }
     ]
   };
 
   render() {
-    let { cardList1 = [], stakeDai = [] } = this.state;
+    let { stakeDai = [] } = this.state;
 
     return (
       <Fragment>
-        <div className="row">
-          {cardList1.map((card, index) => (
-            <div key={index} className="col-lg-3 col-md-6 col-sm-6">
-              <div className="card card-icon-bg card-icon-bg-primary o-hidden mb-4">
-                <div className="card-body text-center">
-                  <i className={card.icon}></i>
-                  <div className="content">
-                    <p className="text-muted mt-2 mb-0 text-capitalize">
-                      {card.subtitle}
-                    </p>
-                    <p className="lead text-primary text-24 mb-2 text-capitalize">
-                      {card.title}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
 
-        <div className="row">
+        <div >
           {stakeDai.map((card, index) => (
-            <div key={index} className="col-lg-3 col-md-6 col-sm-6">
-              <div className="card card-icon-bg card-icon-bg-primary o-hidden mb-4">
+            <div key={index} className="col-lg-6 col-md-6 col-sm-6" style={{display: "flex", height: "76px"}}>
+              <div className="card o-hidden" style={{display: "flex", flexDirection: "row"}}>
 
-                <div className="card-body text-center">
+                <button className="card-body text-center" style={{padding: "4px"}}>
                   <i className={card.leftIcon}></i>
-                  <div className="content">
-                    <p className="text-muted mt-2 mb-0 text-capitalize">
+                  <div >
+                    <p className="text-muted text-capitalize" style={{marginBottom: "0px"}}>
                       {card.leftSubtitle}
                     </p>
-                    <p className="lead text-primary text-24 mb-2 text-capitalize">
+                    <p className="lead text-primary text-capitalize">
                       {card.leftTitle}
                     </p>
                   </div>
-                </div>
+                </button>
 
-                <div className="card-body text-center">
+                <button className="card-body text-center" style={{padding: "4px"}}>
                   <i className={card.rightIcon}></i>
-                  <div className="content">
-                    <p className="text-muted mt-2 mb-0 text-capitalize">
+                  <div >
+                    <p className="text-muted text-capitalize" style={{marginBottom: "0px"}}>
                       {card.rightSubtitle}
                     </p>
-                    <p className="lead text-primary text-24 mb-2 text-capitalize">
+                    <p className="lead text-primary text-capitalize">
                       {card.rightTitle}
                     </p>
                   </div>
-                </div>
+                </button>
 
               </div>
             </div>
