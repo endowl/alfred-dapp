@@ -7,6 +7,7 @@ import { ethers } from 'ethers';
 import bringOutYourDeadFactoryAbi from "../../../abi/bringOutYourDeadFactoryAbi";
 import LinkEtherscanAddress from './LinkEtherscanAddress';
 import LinkEtherscanTx from './LinkEtherscanTx';
+import { Link } from 'react-router-dom';
 
 function NewEstateForm() {
     const wallet = useWallet();
@@ -127,16 +128,22 @@ function NewEstateForm() {
                     Your digital estate has been established on the blockchain!
                 </Alert.Heading>
                 <p>
-                    The smart contract's address is <strong><LinkEtherscanAddress address={estateAddress} chainId="42">{estateAddress}</LinkEtherscanAddress></strong>
+                    The smart contract's address is <strong><Link to={'/dapp/estate/' + estateAddress} address={estateAddress} chainId="42">{estateAddress}</Link></strong>
                 </p>
             </Alert>
             <Alert variant="danger" show={status === statuses.ERROR}>
                 <Alert.Heading>
                     There was a problem creating the smart contract.
                 </Alert.Heading>
-                <p>
-                    You may be able to find out more information by <LinkEtherscanTx txHash={txHash} chainId="42">investigating the transaction on Etherscan.</LinkEtherscanTx>
-                </p>
+                {txHash ? (
+                    <p>
+                        You may be able to find out more information by <LinkEtherscanTx txHash={txHash} chainId="42">investigating the transaction on Etherscan.</LinkEtherscanTx>
+                    </p>
+                ) : (
+                    <p>
+                        Transaction does not appear to have been submitted to the blockchain.
+                    </p>
+                )}
             </Alert>
 
         </form>

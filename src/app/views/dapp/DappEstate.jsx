@@ -8,7 +8,6 @@ import { ethers } from 'ethers';
 import bringOutYourDeadAbi from "../../../abi/bringOutYourDeadAbi";
 import LinkEtherscanAddress from './LinkEtherscanAddress';
 
-
 function EditExecutor(props) {
     const [show, setShow] = useState(false);
 
@@ -31,7 +30,7 @@ function EditExecutor(props) {
                 <p>
                     Address of the executor for the estate
                 </p>
-                <input type="text" name="executorInput" value="" class="form-control"/>
+                <input type="text" name="executorInput" value="" className="form-control"/>
             </Modal.Body>
             <Modal.Footer>
                 <Button variant="secondary" onClick={() => handleClose()}>
@@ -54,6 +53,10 @@ function DappEstate(props) {
     const [owner, setOwner] = useState('');
     const [executor, setExecutor] = useState('');
     let estateContract;
+
+    if(estateAddress === '' && props.match.params.address !== undefined) {
+        setEstateAddress(props.match.params.address);
+    }
 
     async function update() {
         try {

@@ -10,7 +10,7 @@ const dappRoutes = [
     //     component: DappHome
     // },
     {
-        path: "/dapp/estate",
+        path: "/dapp/estate/:address?",
         component: DappEstate
     },
     {
