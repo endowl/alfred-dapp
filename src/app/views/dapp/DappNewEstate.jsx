@@ -8,6 +8,8 @@ import bringOutYourDeadFactoryAbi from "../../../abi/bringOutYourDeadFactoryAbi"
 import LinkEtherscanAddress from './LinkEtherscanAddress';
 import LinkEtherscanTx from './LinkEtherscanTx';
 import { Link } from 'react-router-dom';
+import localStorageService from "../../services/localStorageService";
+
 
 function NewEstateForm() {
     const wallet = useWallet();
@@ -69,6 +71,8 @@ function NewEstateForm() {
         address = ethers.utils.getAddress(address);
         console.log(address);
         setEstateAddress(address);
+
+        localStorageService.setItem('estate', address);
 
         // console.log(receipt.events);
         // console.log(receipt);
