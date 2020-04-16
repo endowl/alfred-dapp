@@ -363,17 +363,15 @@ function DappEstate(props) {
                                                 <div className="row">
                                                     {assets.map((asset, index) => (
                                                         <div className="col-lg-3 col-md-6 col-sm-6" key={asset.address}>
-                                                            <div
-                                                                className="card card-icon-bg card-icon-bg-primary o-hidden mb-4">
+                                                            <div className="card card-icon-bg card-icon-bg-primary o-hidden mb-4">
                                                                 <div className="card-body text-center">
                                                                     <span className={"i- icon icon-" + asset.symbol.toLowerCase()}></span>
-
                                                                     <div className="content">
                                                                         <p className="text-muted mt-2 mb-0 text-capitalize">
                                                                             {asset.name}
                                                                         </p>
                                                                         <p className="lead text-primary text-24 mb-2 text-capitalize">
-                                                                            {asset.balance} {asset.symbol}
+                                                                            {asset.balance}&nbsp;{asset.symbol}
                                                                         </p>
                                                                     </div>
                                                                 </div>
