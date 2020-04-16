@@ -3,6 +3,7 @@ import ReactEcharts from "echarts-for-react";
 
 const PieChart = ({data, height = "260px", name="", color = []}) => {
     if (color.length === 0) {
+        // TODO: Add more default colors
         color = ["#62549c", "#7566b5", "#7d6cbb", "#8877bd", "#9181bd", "#6957af"];
     }
     const option = {

@@ -2,7 +2,7 @@ import React, {Component, useState, Fragment} from "react";
 import { Breadcrumb, SimpleCard, CodeViewer } from "@gull";
 import { useWallet } from "use-wallet";
 import EthereumDapp from "./EthereumDapp";
-import {Alert, Badge} from "react-bootstrap";
+import {Alert, Badge, Card, Dropdown} from "react-bootstrap";
 import { Modal, Button } from "react-bootstrap";
 import { ethers } from 'ethers';
 import bringOutYourDeadAbi from "../../../abi/bringOutYourDeadAbi";
@@ -79,25 +79,12 @@ function DappEstate(props) {
     const [liveliness, setLiveliness] = useState(0);
     const [beneficiaries, setBeneficiaries] = useState([]);
     const [isOwner, setIsOwner] = useState(false);
+    const [showTodo, setShowTodo] = useState(false);
     let estateContract;
 
     const [runInit, setRunInit] = useState(true);
 
-    /*
-    async function getEstateDetails() {
-        let estateDetails = {};
-        try {
-            estateDetails['owner'] = await estateContract.owner();
-            estateDetails['executor'] = await estateContract.executor();
-            estateDetails['liveliness'] = await estateContract.liveliness();
-            estateDetails['beneficiaries'] = await estateContract.getBeneficiaryDetails();
-        } catch (e) {
-            console.log('Failed getting estate details');
-        }
-    }
-    */
-
-    async function update() {
+    async function estateChanged() {
         const provider = new ethers.providers.Web3Provider(wallet.ethereum);
         const signer = provider.getSigner(0);
 
@@ -139,8 +126,10 @@ function DappEstate(props) {
     // Initialize estate data one time after wallet connects
     if(wallet.connected && runInit) {
         setRunInit(false);
-        update()
+        estateChanged()
     }
+
+    // TODO: Run estateChanged if estate changes
 
     return (
             <EthereumDapp>
@@ -152,6 +141,20 @@ function DappEstate(props) {
                             {name: "Estate"}
                         ]}
                     ></Breadcrumb>
+                    <Modal centered={true} show={showTodo} onHide={()=>setShowTodo(false)}>
+                        <Modal.Header closeButton>
+                            <Modal.Title>Under Construction</Modal.Title>
+                        </Modal.Header>
+                        <Modal.Body className="text-center">
+                            <img src="/assets/images/under-construction.png"/>
+                            <h3>Coming soon!</h3>
+                        </Modal.Body>
+                        <Modal.Footer>
+                            <Button variant="secondary" onClick={()=>setShowTodo(false)}>
+                                Close
+                            </Button>
+                        </Modal.Footer>
+                    </Modal>
                     <SimpleCard title="Select Estate" className="mb-4">
                         <p>
                             Enter the address of the estate you wish to manage
@@ -205,7 +208,17 @@ function DappEstate(props) {
                                     )}
                                 </div>
                             </SimpleCard>
-                            <SimpleCard title="Beneficiaries" className="mb-4">
+                            <Card className="mb-4">
+                                <Card.Body>
+                                    <div className="card-title d-flex align-items-center">
+                                        <h3 className="mb-0">Beneficiaries</h3>
+                                        <span className="flex-grow-1"></span>
+                                        <span className="cursor-pointer text-success mr-2">
+                                            <i className="nav-icon i-Add font-weight-bold" title="Add New Beneficiary" onClick={()=>setShowTodo(true)}></i>
+                                        </span>
+                                    </div>
+
+                            {/*<SimpleCard title="Beneficiaries" className="mb-4">*/}
                                 <div>
                                     {beneficiaries.length === 0 ? (
                                         <span> </span>
@@ -215,28 +228,32 @@ function DappEstate(props) {
                                                 <table className="table table-bordered table-sm text-center">
                                                     <thead>
                                                         <tr>
+                                                            <th>#</th>
                                                             <th>Address</th>
                                                             <th>Shares</th>
                                                             <th>Action</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                    {beneficiaries.map(beneficiary => (
+                                                    {beneficiaries.map((beneficiary, index) => (
                                                         <tr key={beneficiary.address}>
                                                             <th scope="row">
+                                                                {index+1}
+                                                            </th>
+                                                            <td>
                                                                 <LinkEtherscanAddress address={beneficiary.address}>
                                                                     {beneficiary.address}
                                                                 </LinkEtherscanAddress>
-                                                            </th>
+                                                            </td>
                                                             <td>
                                                                 {beneficiary.shares}
                                                             </td>
                                                             <td>
                                                                 <span className="cursor-pointer text-success mr-2">
-                                                                    <i className="nav-icon i-Pen-2 font-weight-bold"></i>
+                                                                    <i className="nav-icon i-Pen-2 font-weight-bold" onClick={()=>setShowTodo(true)}></i>
                                                                 </span>
                                                                 <span className="cursor-pointer text-danger mr-2">
-                                                                    <i className="nav-icon i-Close-Window font-weight-bold"></i>
+                                                                    <i className="nav-icon i-Close-Window font-weight-bold" onClick={()=>setShowTodo(true)}></i>
                                                                 </span>
                                                             </td>
                                                         </tr>
@@ -248,7 +265,9 @@ function DappEstate(props) {
                                         </Fragment>
                                     )}
                                 </div>
-                            </SimpleCard>
+                            {/*</SimpleCard>*/}
+                                </Card.Body>
+                            </Card>
                         </Fragment>
                     )}
                 </div>
