@@ -274,26 +274,26 @@ function DappEstate(props) {
                                         </Badge>
                                     )}
                                 </div>
-                                {/*<div>*/}
-                                {/*    Executor:*/}
-                                {/*    {executor === ethers.constants.AddressZero ? (*/}
-                                {/*        <span> (None) </span>*/}
-                                {/*    ) : (*/}
-                                {/*        <span>*/}
-                                {/*            <LinkEtherscanAddress address={executor} chainId={chainId}>{executor}</LinkEtherscanAddress>*/}
-                                {/*        </span>*/}
-                                {/*    )}*/}
-                                {/*    <span className="cursor-pointer text-success mr-2">*/}
-                                {/*        <i className="nav-icon i-Pen-2 font-weight-bold" onClick={() => setShowTodo(true)}></i>*/}
-                                {/*    </span>*/}
-                                {/*    <span className="cursor-pointer text-danger mr-2">*/}
-                                {/*        <i className="nav-icon i-Close-Window font-weight-bold" onClick={() => setShowTodo(true)}></i>*/}
-                                {/*    </span>*/}
+                                <div>
+                                    Executor:
+                                    {executor === ethers.constants.AddressZero ? (
+                                        <span> (None) </span>
+                                    ) : (
+                                        <span>
+                                            <LinkEtherscanAddress address={executor} chainId={chainId}>{executor}</LinkEtherscanAddress>
+                                        </span>
+                                    )}
+                                    <span className="cursor-pointer text-success mr-2">
+                                        <i className="nav-icon i-Pen-2 font-weight-bold" onClick={() => setShowTodo(true)}></i>
+                                    </span>
+                                    <span className="cursor-pointer text-danger mr-2">
+                                        <i className="nav-icon i-Close-Window font-weight-bold" onClick={() => setShowTodo(true)}></i>
+                                    </span>
 
-                                {/*    {isOwner && (*/}
-                                {/*        <EditExecutor executor={executor}/>*/}
-                                {/*    )}*/}
-                                {/*</div>*/}
+                                    {isOwner && (
+                                        <EditExecutor executor={executor}/>
+                                    )}
+                                </div>
                             </SimpleCard>
 
                             <SimpleCard title="Dead Man's Switch" className="mb-4">

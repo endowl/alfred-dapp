@@ -1,4 +1,4 @@
-import React from "react";
+import React, {Fragment} from "react";
 import { Redirect } from "react-router-dom";
 import dashboardRoutes from "./views/dashboard/dashboardRoutes";
 import uiKitsRoutes from "./views/ui-kits/uiKitsRoutes";
@@ -20,6 +20,9 @@ import ecommerceRoutes from "./views/app/ecommerce/ecommerceRoutes";
 import contactRoutes from "./views/app/contact/contactRoutes";
 import dappRoutes from "./views/dapp/dappRoutes";
 
+// import { renderRoutes } from "react-router-config";
+import GullLayout from "app/GullLayout/GullLayout";
+
 const redirectRoute = [
   {
     path: "/",
@@ -34,11 +37,18 @@ const errorRoute = [
   }
 ];
 
+const Root = ({ route }) => (
+    <Fragment>
+      <GullLayout route={route}></GullLayout>
+    </Fragment>
+);
+
 const routes = [
   ...sessionsRoutes,
   {
     path: "/",
-    component: AuthGuard,
+    // component: AuthGuard,
+    component: Root,
     routes: [
         ...dappRoutes,
       ...dashboardRoutes,

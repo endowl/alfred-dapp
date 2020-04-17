@@ -37,6 +37,14 @@ function NewEstateForm() {
         event.preventDefault();
         console.log(wallet);
 
+        // TODO: Use Gnosis Contract Proxy Kit (CPK) to create a Gnosis Safe
+        // TODO: Use TX batching to make a single call to Gnosis Safe which:
+        //       - Creates the Gnosis Safe (automatic on first TX)
+        //       - Creates Alfred BOYD Estate contract
+        //       - Set's wallet address as owner of Estate contract
+        //         (is new Estate contract address knowable during transaction batching?)
+        //         (It can probably be determined from pre-determined Gnosis Safe address and nonce of zero)
+
         const oracleParam = oracle !== '' ? oracle : ethers.constants.AddressZero;
         const executorParam = oracle !== '' ? oracle : ethers.constants.AddressZero;
 
