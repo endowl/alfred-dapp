@@ -3,13 +3,15 @@ import { Breadcrumb, SimpleCard, CodeViewer } from "@gull";
 import { useWallet } from "use-wallet";
 import EthereumDapp from "./EthereumDapp";
 import {Alert, Badge, Card, Dropdown} from "react-bootstrap";
-import { Modal, Button } from "react-bootstrap";
+import { Form, Modal, Button } from "react-bootstrap";
 import { ethers } from 'ethers';
 import bringOutYourDeadAbi from "../../../abi/bringOutYourDeadAbi";
 import erc20Abi from "../../../abi/erc20";
 import LinkEtherscanAddress from './LinkEtherscanAddress';
 import localStorageService from "../../services/localStorageService";
 import PieChart from "./PieChart";
+
+const CPK = require('contract-proxy-kit');
 
 function EditExecutor(props) {
     const [show, setShow] = useState(false);
@@ -77,6 +79,7 @@ function DappEstate(props) {
     });
     const [owner, setOwner] = useState('');
     const [executor, setExecutor] = useState('');
+    const [gnosisSafe, setGnosisSafe] = useState('');
     const [liveliness, setLiveliness] = useState(0);
     const [beneficiaries, setBeneficiaries] = useState([]);
     const [trackedTokens, setTrackedTokens] = useState([]);
@@ -95,6 +98,15 @@ function DappEstate(props) {
         console.log('provider');
         // console.log(provider);
         console.log(provider.getNetwork().then((network) => {console.log(network.chainId)}));
+
+
+        // NOTE: This creates a Gnosis Contracty Proxy Kit object
+        // NOTE: it is associated with browser wallet address automatically, not the Alfred contract
+        // const cpkProvider = new CpkEthersProvider({ ethers, signer: wallet });
+        // const cpk = await CPK.create( { ethers, signer: signer } );
+        const cpk = await CPK.create( { ethers, signer: signer } );
+        // cpk.setOwnerAccount(estateAddress);  // This does not have the expected effect
+        setGnosisSafe(cpk.address);
 
         try {
             estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
@@ -158,7 +170,7 @@ function DappEstate(props) {
             console.log("Failed retrieving asset balances");
         }
 
-        // Get ERC20 token balances
+        // Get balances of all tracked ERC20 tokens
         let erc20Contract;
         for(let i=0; i < _trackedTokens.length; i++) {
             console.log("Attempting to load details for asset #" + i + ": " + _trackedTokens[i]);
@@ -180,18 +192,12 @@ function DappEstate(props) {
         }
 
         setAssets(_assets);
-
-        // TODO: Load balances of assets from trackedTokens
-    }
-
-    async function handleChangeExecutor() {
-        // TODO
     }
 
     // Initialize estate data one time after wallet connects
     if(wallet.connected && runInit) {
         setRunInit(false);
-        estateChanged()
+        estateChanged();
     }
 
     // TODO: Run estateChanged if estate changes
@@ -239,10 +245,13 @@ function DappEstate(props) {
                         <Fragment>
                             <SimpleCard title="Estate Details" className="mb-4">
                                 <div>
-                                    Contract Address: <LinkEtherscanAddress address={estateAddress} chainId={chainId}>{estateAddress}</LinkEtherscanAddress>
-                                    <span className="cursor-pointer text-success mr-2">
-                                        <i className="nav-icon i-Pen-2 font-weight-bold" onClick={() => setShowTodo(true)}></i>
-                                    </span>
+                                    Estate: <LinkEtherscanAddress address={estateAddress} chainId={chainId}>{estateAddress}</LinkEtherscanAddress>
+                                    {/*<span className="cursor-pointer text-success mr-2">*/}
+                                    {/*    <i className="nav-icon i-Pen-2 font-weight-bold" onClick={() => setShowTodo(true)}></i>*/}
+                                    {/*</span>*/}
+                                </div>
+                                <div>
+                                    Gnosis Safe: <LinkEtherscanAddress address={gnosisSafe} chainId={chainId}>{gnosisSafe}</LinkEtherscanAddress>
                                 </div>
                                 <div>
                                     Owner: <LinkEtherscanAddress address={owner} chainId={chainId}>{owner}</LinkEtherscanAddress>
@@ -265,26 +274,71 @@ function DappEstate(props) {
                                         </Badge>
                                     )}
                                 </div>
-                                <div>
-                                    Executor:
-                                    {executor === ethers.constants.AddressZero ? (
-                                        <span> (None) </span>
-                                    ) : (
-                                        <span>
-                                            <LinkEtherscanAddress address={executor} chainId={chainId}>{executor}</LinkEtherscanAddress>
-                                        </span>
-                                    )}
-                                    <span className="cursor-pointer text-success mr-2">
-                                        <i className="nav-icon i-Pen-2 font-weight-bold" onClick={() => setShowTodo(true)}></i>
-                                    </span>
-                                    <span className="cursor-pointer text-danger mr-2">
-                                        <i className="nav-icon i-Close-Window font-weight-bold" onClick={() => setShowTodo(true)}></i>
-                                    </span>
+                                {/*<div>*/}
+                                {/*    Executor:*/}
+                                {/*    {executor === ethers.constants.AddressZero ? (*/}
+                                {/*        <span> (None) </span>*/}
+                                {/*    ) : (*/}
+                                {/*        <span>*/}
+                                {/*            <LinkEtherscanAddress address={executor} chainId={chainId}>{executor}</LinkEtherscanAddress>*/}
+                                {/*        </span>*/}
+                                {/*    )}*/}
+                                {/*    <span className="cursor-pointer text-success mr-2">*/}
+                                {/*        <i className="nav-icon i-Pen-2 font-weight-bold" onClick={() => setShowTodo(true)}></i>*/}
+                                {/*    </span>*/}
+                                {/*    <span className="cursor-pointer text-danger mr-2">*/}
+                                {/*        <i className="nav-icon i-Close-Window font-weight-bold" onClick={() => setShowTodo(true)}></i>*/}
+                                {/*    </span>*/}
 
-                                    {isOwner && (
-                                        <EditExecutor executor={executor}/>
-                                    )}
-                                </div>
+                                {/*    {isOwner && (*/}
+                                {/*        <EditExecutor executor={executor}/>*/}
+                                {/*    )}*/}
+                                {/*</div>*/}
+                            </SimpleCard>
+
+                            <SimpleCard title="Dead Man's Switch" className="mb-4">
+                                    <Form>
+                                        <Form.Check type="switch" id="deadManEnabled" label="Enabled"/>
+                                            <div className="form-group mb-3">
+                                                <label htmlFor="deadManCheckInDays">Maximum number of days between Check-ins</label>
+                                                <input
+                                                    className="form-control"
+                                                    id="deadManCheckInDays"
+                                                    placeholder="Check-in period in days"
+                                                />
+                                        </div>
+                                    </Form>
+                                    <div className="row">
+                                        <div className="col-lg-3 col-md-6 col-sm-6">
+                                            <Button
+                                                key="primary"
+                                                variant="primary"
+                                                size="lg"
+                                                className="m-1 mb-4 text-capitalize d-block w-100 my-2"
+                                                // className="d-block w-100 my-2 text-capitalize"
+                                                onClick={()=>setShowTodo(true)}
+                                            >
+                                                I'm Alive - Check-in Now!
+                                            </Button>
+                                        </div>
+                                    </div>
+                                    <div className="row">
+                                        <div className="col-lg-3 col-md-6 col-sm-6">
+                                            <div className="card card-icon-bg card-icon-bg-primary o-hidden mb-4">
+                                                <div className="card-body text-center">
+                                                    <i className="i-Stopwatch"></i>
+                                                    <div className="content">
+                                                        <p className="text-muted mt-2 mb-0 text-capitalize">
+                                                            Last Check-In
+                                                        </p>
+                                                        <p className="lead text-primary text-24 mb-2 text-capitalize">
+                                                            ...&nbsp;days
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                             </SimpleCard>
 
                             <Card className="mb-4">
@@ -327,10 +381,14 @@ function DappEstate(props) {
                                                                 </td>
                                                                 <td>
                                                                     <span className="cursor-pointer text-success mr-2">
-                                                                        <i className="nav-icon i-Pen-2 font-weight-bold" onClick={()=>setShowTodo(true)}></i>
+                                                                        <i className="nav-icon i-Pen-2 font-weight-bold"
+                                                                           title="Edit beneficiary"
+                                                                           onClick={()=>setShowTodo(true)}></i>
                                                                     </span>
                                                                     <span className="cursor-pointer text-danger mr-2">
-                                                                        <i className="nav-icon i-Close-Window font-weight-bold" onClick={()=>setShowTodo(true)}></i>
+                                                                        <i className="nav-icon i-Close-Window font-weight-bold"
+                                                                           title="Remove beneficiary"
+                                                                           onClick={()=>setShowTodo(true)}></i>
                                                                     </span>
                                                                 </td>
                                                             </tr>
@@ -402,11 +460,19 @@ function DappEstate(props) {
                                                                 </td>
                                                                 <td>
                                                                     <span className="cursor-pointer text-success mr-2">
-                                                                        <i className="nav-icon i-Pen-2 font-weight-bold" onClick={()=>setShowTodo(true)}></i>
+                                                                        <i className="nav-icon i-Arrow-Forward-2 font-weight-bold"
+                                                                           title="Send"
+                                                                           onClick={()=>setShowTodo(true)}></i>
                                                                     </span>
-                                                                    <span className="cursor-pointer text-danger mr-2">
-                                                                        <i className="nav-icon i-Close-Window font-weight-bold" onClick={()=>setShowTodo(true)}></i>
-                                                                    </span>
+                                                                    {asset.address != ethers.constants.AddressZero && (
+                                                                    <Fragment>
+                                                                        <span className="cursor-pointer text-danger mr-2">
+                                                                            <i className="nav-icon i-Close-Window font-weight-bold"
+                                                                                title="Stop tracking asset"
+                                                                               onClick={()=>setShowTodo(true)}></i>
+                                                                        </span>
+                                                                    </Fragment>
+                                                                    )}
                                                                 </td>
                                                             </tr>
                                                         ))}
@@ -419,7 +485,6 @@ function DappEstate(props) {
                                     </div>
                                 </Card.Body>
                             </Card>
-
 
                         </Fragment>
                     )}

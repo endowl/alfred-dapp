@@ -15,11 +15,12 @@ function EthereumDapp(props) {
 
     // NOTE: This can cause a console warning about being unable to update a component while another is rendering
     // TODO: Maybe a race condition can be avoided???
+    // TODO: Maybe display a loader to indicate connection in progress
 
     // If user previously activated connection, re-activate it on page reload
     if(firstRun) {
         setFirstRun(false);
-        if(localStorageService.getItem('connectWallet')) {
+        if(!wallet.connected && localStorageService.getItem('connectWallet')) {
             let providerType = localStorageService.getItem('walletProvider');
             if(providerType === null || providerType === '') {
                 wallet.activate()
