@@ -3,13 +3,13 @@ const bringOutYourDeadFactoryAbi = [
 		"anonymous": false,
 		"inputs": [
 			{
-				"indexed": false,
+				"indexed": true,
 				"internalType": "address",
 				"name": "estate",
 				"type": "address"
 			},
 			{
-				"indexed": false,
+				"indexed": true,
 				"internalType": "address",
 				"name": "owner",
 				"type": "address"
@@ -30,18 +30,49 @@ const bringOutYourDeadFactoryAbi = [
 				"internalType": "address",
 				"name": "executor",
 				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "salt",
+				"type": "uint256"
 			}
 		],
 		"name": "newEstate",
 		"outputs": [
 			{
-				"internalType": "address",
-				"name": "estateContract",
+				"internalType": "address payable",
+				"name": "estate",
 				"type": "address"
 			}
 		],
 		"payable": true,
 		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "creator",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "salt",
+				"type": "uint256"
+			}
+		],
+		"name": "getEstateAddress",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "estate",
+				"type": "address"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
 		"type": "function"
 	}
 ];
