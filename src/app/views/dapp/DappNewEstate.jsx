@@ -40,19 +40,20 @@ function NewEstateForm() {
         event.preventDefault();
         console.log(wallet);
 
-        // TODO: Use Gnosis Contract Proxy Kit (CPK) to create a Gnosis Safe
-        // TODO: Use TX batching to make a single call to Gnosis Safe which:
+        // Use Gnosis Contract Proxy Kit (CPK) to create a Gnosis Safe
+        // Use TX batching to make a single call to Gnosis Safe which:
         //       - Creates the Gnosis Safe (automatic on first TX)
         //       - Creates Alfred BOYD Estate contract
         //       - Set's wallet address as owner of Estate contract
-        //         (is new Estate contract address knowable during transaction batching?)
-        //         (It can probably be determined from pre-determined Gnosis Safe address and nonce of zero)
+
+        // TODO: Set estate as recovery option for Gnosis Safe
 
         const oracleParam = oracle !== '' ? oracle : ethers.constants.AddressZero;
         const executorParam = oracle !== '' ? oracle : ethers.constants.AddressZero;
 
-        const salt = 15;
+        const salt = 17;
 
+        // TODO: Sanity check oracle and executor addresses
         console.log("Oracle", oracleParam);
         console.log("Executor", executorParam);
 
@@ -76,8 +77,6 @@ function NewEstateForm() {
         const boydInterface = new ethers.utils.Interface(bringOutYourDeadAbi);
 
         let newEstateData = boydFactoryInterface.functions.newEstate.encode([oracleParam, executorParam, salt]);
-        // console.log(newEstateData);
-
         let transferOnershipData = boydInterface.functions.transferOwnership.encode([wallet.account]);
 
         const txs = [
@@ -95,14 +94,8 @@ function NewEstateForm() {
             }
         ];
 
-        console.log("TXs:");
-        console.log(txs);
-
-        // TODO: Sanity check oracle and executor addresses
-
-        setStatus(statuses.PROMPTING);
-
-        // Send multi-TX through Gnosis Safe, causing Safe to be deployed if it hasn't yet
+        // console.log("TXs:");
+        // console.log(txs);
 
         // Listen for estate creation event
         let filter = boydFactory.filters.estateCreated(null, cpk.address);
@@ -116,12 +109,13 @@ function NewEstateForm() {
             setStatus(statuses.SUCCESS);
         });
 
-        // Initiate transaction request
+        setStatus(statuses.PROMPTING);
+
+        // Send multi-TX through Gnosis Safe, causing Safe to be deployed if it hasn't yet
         try {
             let cpkHash = await cpk.execTransactions(txs, {gasLimit: 5000000});
-            setTxHash(cpkHash);
+            setTxHash(cpkHash.hash);
             console.log(cpkHash);
-
             setStatus(statuses.PROCESSING);
         } catch (e) {
             console.log(e);
@@ -228,7 +222,7 @@ function NewEstateForm() {
                     Your digital estate has been established on the blockchain!
                 </Alert.Heading>
                 <p>
-                    The smart contract's address is <strong><Link to={'/dapp/estate/' + estateAddress} address={estateAddress} chainId="42">{estateAddress}</Link></strong>
+                    The smart contract's address is <strong><Link to={'/dapp/estate/' + estateAddress} address={estateAddress}>{estateAddress}</Link></strong>
                 </p>
             </Alert>
             <Alert variant="danger" show={status === statuses.ERROR}>
@@ -267,10 +261,10 @@ class DappNewEstate extends Component {
                     ></Breadcrumb>
                     <SimpleCard title="Create New Estate" className="mb-4">
                         <p>
-                            Submit this form to create your new digital estate on the Ethereum blockchain,  courtesy of Alfred.  An estate allows you to managing, spend, and invest your assets while planning for the future.
+                            Submit this form to create your new digital estate on the Ethereum blockchain.  An estate allows you to manage, spend, and invest your assets while planning for the future.
                         </p>
                         <p>
-                            A Gnosis Safe will be generated for you and managed by your estate.  Should anything ever happen to you, your estate will handle inheritance according to your wishes.
+                            A Gnosis Safe will be generated for you and linked to your estate.  Should anything ever happen to you, your estate will handle inheritance according to your wishes.
                         </p>
                         <NewEstateForm/>
                     </SimpleCard>
