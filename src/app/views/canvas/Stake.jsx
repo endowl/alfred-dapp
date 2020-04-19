@@ -1,4 +1,6 @@
 import React, { Component, Fragment } from "react";
+import { getStakedAmount } from "./utils/getStakedAmount";
+import StakingModal from "./StakingModal";
 
 class Stake extends Component {
   state = {
@@ -16,6 +18,8 @@ class Stake extends Component {
 
   render() {
     let { stakeDai = [] } = this.state;
+    let stake = getStakedAmount()/*.then(res => res, err => err);*/
+    console.log("getStakedAmount result:", stake);
 
     return (
       <Fragment>
@@ -25,14 +29,14 @@ class Stake extends Component {
             <div key={index} className="col-lg-6 col-md-6 col-sm-6" style={{display: "flex", height: "76px"}}>
               <div className="card o-hidden" style={{display: "flex", flexDirection: "row"}}>
 
-                <button className="card-body text-center" style={{padding: "4px"}}>
+                <button className="card-body text-center" style={{padding: "4px"}} onClick={(e)=>alert("call stake()")}>
                   <i className={card.leftIcon}></i>
                   <div >
                     <p className="text-muted text-capitalize" style={{marginBottom: "0px"}}>
                       {card.leftSubtitle}
                     </p>
                     <p className="lead text-primary text-capitalize">
-                      {card.leftTitle}
+                      {stake}
                     </p>
                   </div>
                 </button>
@@ -53,6 +57,8 @@ class Stake extends Component {
             </div>
           ))}
         </div>
+
+        <StakingModal/>
 
 
       </Fragment>
