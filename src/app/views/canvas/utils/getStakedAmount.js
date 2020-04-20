@@ -11,7 +11,7 @@ console.log("provider", provider);
 
 // @DEV: contract error: t.forEach is not a function
 try {
-    const contract = new ethers.Contract(contractAddress, abi, provider)
+    const contract = new Contract(contractAddress, abi, provider)
     console.log("contract", contract);
 } catch(err) {
     console.log("error in Contract:", err)

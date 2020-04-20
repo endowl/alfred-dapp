@@ -1,4 +1,4 @@
-const abi = [
+let abi = [
 	{
 		"inputs": [],
 		"payable": false,
@@ -126,7 +126,7 @@ const abi = [
 		"payable": true,
 		"stateMutability": "payable",
 		"type": "function"
-	}
+	},
 ]
 
-exports.abi = abi;
+export default abi;
