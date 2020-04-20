@@ -16,7 +16,8 @@ class Stake extends Component {
           rightSubtitle: "interest funded"
         }
       ],
-      stake: null
+      stake: null,
+      modal: false,
     };
 
     this.getStake = this.getStake.bind(this)
@@ -48,7 +49,7 @@ class Stake extends Component {
             <div key={index} className="col-lg-6 col-md-6 col-sm-6" style={{display: "flex", height: "76px"}}>
               <div className="card o-hidden" style={{display: "flex", flexDirection: "row"}}>
 
-                <button className="card-body text-center" style={{padding: "4px"}} onClick={(e)=>alert("call stake()")}>
+                <button className="card-body text-center" style={{padding: "4px"}} onClick={(e)=>this.setState({modal: !this.state.modal})}>
                   <i className={card.leftIcon}></i>
                   <div >
                     <p className="text-muted text-capitalize" style={{marginBottom: "0px"}}>
@@ -77,7 +78,7 @@ class Stake extends Component {
           ))}
         </div>
 
-        <StakingModal/>
+        {this.state.modal && <StakingModal/>}
 
 
       </Fragment>
