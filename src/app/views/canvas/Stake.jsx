@@ -3,23 +3,42 @@ import { getStakedAmount } from "./utils/getStakedAmount";
 import StakingModal from "./StakingModal";
 
 class Stake extends Component {
-  state = {
-    stakeDai: [
-      {
-        leftIcon: "i-Money-2",
-        leftTitle: "120.00",
-        leftSubtitle: "staked",
-        rightIcon: "i-Financial",
-        rightTitle: "4.0210",
-        rightSubtitle: "interest funded"
-      }
-    ]
-  };
+  constructor(props){
+    super(props)
+    this.state = {
+      stakeDai: [
+        {
+          leftIcon: "i-Money-2",
+          leftTitle: "120.00",
+          leftSubtitle: "staked",
+          rightIcon: "i-Financial",
+          rightTitle: "4.0210",
+          rightSubtitle: "interest funded"
+        }
+      ],
+      stake: null
+    };
+
+    this.getStake = this.getStake.bind(this)
+  }
+
+  getStake = () => {
+    getStakedAmount()
+    .then(
+      res => this.setState({stake: res})
+    ).catch(
+      err => console.log("err:",err)
+    )
+  }
+
+  componentDidMount(){
+    this.getStake()
+    console.log("state:",this.state)
+  }
 
   render() {
     let { stakeDai = [] } = this.state;
-    let stake = getStakedAmount()/*.then(res => res, err => err);*/
-    console.log("getStakedAmount result:", stake);
+    // this.getStake();
 
     return (
       <Fragment>
@@ -36,7 +55,7 @@ class Stake extends Component {
                       {card.leftSubtitle}
                     </p>
                     <p className="lead text-primary text-capitalize">
-                      {stake}
+                      {this.state.stake && this.state.stake}
                     </p>
                   </div>
                 </button>
