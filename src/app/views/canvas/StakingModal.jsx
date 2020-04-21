@@ -1,4 +1,5 @@
 import React, { Component, Fragment } from "react";
+import stake from "./utils/stake";
 
 class StakeModal extends Component {
   constructor(props){
@@ -27,7 +28,7 @@ class StakeModal extends Component {
                 <label>How much Dai would you like to stake?
                   <input onChange={this.handleChange}/>
                 </label>
-                <button className="card-body text-center" style={{padding: "4px"}} onClick={(e)=>alert(`called stake(${this.state.dai})`)}>
+                <button className="card-body text-center" style={{padding: "4px"}} onClick={(e)=>stake(this.state.dai)}>
                   Stake it!
                 </button>
               </div>
