@@ -1,5 +1,5 @@
 import React, { Component, Fragment } from "react";
-import stake from "./utils/stake";
+import { stake } from "./utils/stake";
 
 class StakeModal extends Component {
   constructor(props){

@@ -1,13 +1,13 @@
 // call stake(amountOfDai) on SimpleStaking contract
 import { contract } from './contractConnect'
 
-function stake(amount){
+export async function stake(amount){
     console.log("contract:", contract)
     // console.log("contractWithSigner:" ,contractWithSigner)
-    let dai = amount * 10 ** 16
+    let dai = amount * 10 ** 18
     dai = dai.toString()
     console.log("dai:", dai)
-    let tx = contract.stake(dai)
+    let tx = await contract.stake(dai)
     // tx = 
     console.log("tx:",tx.toString())
     // const sendPromise = wallet.sendTransaction(tx)
@@ -17,5 +17,3 @@ function stake(amount){
 
     return true;
 }
-
-export default stake;
