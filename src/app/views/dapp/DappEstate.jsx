@@ -1,4 +1,4 @@
-import React, {Component, useState, Fragment} from "react";
+import React, {Component, useState, Fragment, useEffect} from "react";
 import { Breadcrumb, SimpleCard, CodeViewer } from "@gull";
 import { useWallet } from "use-wallet";
 import EthereumDapp from "./EthereumDapp";
@@ -119,114 +119,126 @@ function DappEstate(props) {
     const [runInit, setRunInit] = useState(true);
     const [chainId, setChainId] = useState(1);
 
-    async function estateChanged() {
-        const provider = new ethers.providers.Web3Provider(wallet.ethereum);
-        const signer = provider.getSigner(0);
-        provider.getNetwork().then((network) => {setChainId(network.chainId)});
-        console.log('provider');
-        // console.log(provider);
-        console.log(provider.getNetwork().then((network) => {console.log(network.chainId)}));
+    // async function estateChanged() {
+    useEffect(() => {
+        async function fetchData() {
+
+            const provider = new ethers.providers.Web3Provider(wallet.ethereum);
+            const signer = provider.getSigner(0);
+            provider.getNetwork().then((network) => {
+                setChainId(network.chainId)
+            });
+            console.log('provider');
+            // console.log(provider);
+            console.log(provider.getNetwork().then((network) => {
+                console.log(network.chainId)
+            }));
 
 
-        // NOTE: This creates a Gnosis Contracty Proxy Kit object
-        // NOTE: it is associated with browser wallet address automatically, not the Alfred contract
-        // const cpkProvider = new CpkEthersProvider({ ethers, signer: wallet });
-        // const cpk = await CPK.create( { ethers, signer: signer } );
-        const cpk = await CPK.create( { ethers, signer: signer } );
-        // cpk.setOwnerAccount(estateAddress);  // This does not have the expected effect
-        setGnosisSafe(cpk.address);
+            // NOTE: This creates a Gnosis Contracty Proxy Kit object
+            // NOTE: it is associated with browser wallet address automatically, not the Alfred contract
+            // const cpkProvider = new CpkEthersProvider({ ethers, signer: wallet });
+            // const cpk = await CPK.create( { ethers, signer: signer } );
+            const cpk = await CPK.create({ethers, signer: signer});
+            // cpk.setOwnerAccount(estateAddress);  // This does not have the expected effect
+            setGnosisSafe(cpk.address);
 
-        try {
-            estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
-            console.log(estateContract);
-            setOwner(await estateContract.owner());
-            setExecutor(await estateContract.executor());
-            setLiveliness(await estateContract.liveliness());
-            setIsOwner(owner === wallet.account);
-        } catch (e) {
-            console.log("Failed while updating estate details, possibly a bad address/ENS name");
-            return;
-        }
-        // Load beneficiary details. NOTE: estateContract.getBeneficiaryDetails() is broken currently, so doing this
-        let bs = [];
-        let b = null;
-        let bAddress;
-        let bShares;
-        do {
             try {
-                console.log("Try b: " + bs.length);
-                bAddress = await estateContract.beneficiaries(bs.length);
-                bShares = await estateContract.beneficiaryShares(bAddress);
-                b = { address: bAddress, shares: bShares.toString() };
-                bs.push(b);
+                estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
+                console.log(estateContract);
+                setOwner(await estateContract.owner());
+                setExecutor(await estateContract.executor());
+                setLiveliness(await estateContract.liveliness());
+                setIsOwner(owner === wallet.account);
             } catch (e) {
-                b = null;
+                console.log("Failed while updating estate details, possibly a bad address/ENS name");
+                return;
             }
-        } while (b !== null);
-        setBeneficiaries(bs);
-        console.log(bs);
-
-        // Determine tracked assets
-        let _trackedTokens = [];
-        let assetAddress = null;
-        do {
-            try {
-                assetAddress = await estateContract.trackedTokens(_trackedTokens.length);
-                _trackedTokens.push(assetAddress);
-            } catch (e) {
-                assetAddress = null
-            }
-        } while (assetAddress !== null);
-        setTrackedTokens(_trackedTokens);
-
-        // Load assets
-        let _assets = [];
-
-        // Get ETH balance
-        try {
-            let wei = await provider.getBalance(estateAddress);
-            _assets = [
-                {
-                    symbol: 'ETH',
-                    name: 'Ether',
-                    address: ethers.constants.AddressZero,
-                    decimals: 18,
-                    balance: ethers.utils.formatEther(wei),
+            // Load beneficiary details. NOTE: estateContract.getBeneficiaryDetails() is broken currently, so doing this
+            let bs = [];
+            let b = null;
+            let bAddress;
+            let bShares;
+            do {
+                try {
+                    console.log("Try b: " + bs.length);
+                    bAddress = await estateContract.beneficiaries(bs.length);
+                    bShares = await estateContract.beneficiaryShares(bAddress);
+                    b = {address: bAddress, shares: bShares.toString()};
+                    bs.push(b);
+                } catch (e) {
+                    b = null;
                 }
-            ];
-        } catch (e) {
-            console.log("Failed retrieving asset balances");
-        }
+            } while (b !== null);
+            setBeneficiaries(bs);
+            console.log(bs);
 
-        // Get balances of all tracked ERC20 tokens
-        let erc20Contract;
-        for(let i=0; i < _trackedTokens.length; i++) {
-            console.log("Attempting to load details for asset #" + i + ": " + _trackedTokens[i]);
+            // Determine tracked assets
+            let _trackedTokens = [];
+            let assetAddress = null;
+            do {
+                try {
+                    assetAddress = await estateContract.trackedTokens(_trackedTokens.length);
+                    _trackedTokens.push(assetAddress);
+                } catch (e) {
+                    assetAddress = null
+                }
+            } while (assetAddress !== null);
+            setTrackedTokens(_trackedTokens);
+
+            // Load assets
+            let _assets = [];
+
+            // Get ETH balance
             try {
-                erc20Contract = new ethers.Contract(_trackedTokens[i], erc20Abi, signer);
-                let decimals = await erc20Contract.decimals();
-                let wei = await erc20Contract.balanceOf(estateAddress);
-                let asset = {
-                    symbol: await erc20Contract.symbol(),
-                    name: await erc20Contract.name(),
-                    address: _trackedTokens[i],
-                    decimals: decimals,
-                    balance: ethers.utils.formatUnits(wei, decimals),
-                };
-                _assets.push(asset);
+                let wei = await provider.getBalance(estateAddress);
+                _assets = [
+                    {
+                        symbol: 'ETH',
+                        name: 'Ether',
+                        address: ethers.constants.AddressZero,
+                        decimals: 18,
+                        balance: ethers.utils.formatEther(wei),
+                    }
+                ];
             } catch (e) {
-                console.log("Failed loading asset #" + i);
+                console.log("Failed retrieving asset balances");
             }
-        }
 
-        setAssets(_assets);
-    }
+            // Get balances of all tracked ERC20 tokens
+            let erc20Contract;
+            for (let i = 0; i < _trackedTokens.length; i++) {
+                console.log("Attempting to load details for asset #" + i + ": " + _trackedTokens[i]);
+                try {
+                    erc20Contract = new ethers.Contract(_trackedTokens[i], erc20Abi, signer);
+                    let decimals = await erc20Contract.decimals();
+                    let wei = await erc20Contract.balanceOf(estateAddress);
+                    let asset = {
+                        symbol: await erc20Contract.symbol(),
+                        name: await erc20Contract.name(),
+                        address: _trackedTokens[i],
+                        decimals: decimals,
+                        balance: ethers.utils.formatUnits(wei, decimals),
+                    };
+                    _assets.push(asset);
+                } catch (e) {
+                    console.log("Failed loading asset #" + i);
+                }
+            }
+
+            setAssets(_assets);
+        }
+        if(wallet.connected) {
+            fetchData();
+        }
+    // }
+    }, [wallet.connected, wallet.account, estateAddress]);
 
     // Initialize estate data one time after wallet connects
-    if(wallet.connected && runInit) {
-        setRunInit(false);
-        estateChanged();
-    }
+    // if(wallet.connected && runInit) {
+    //     setRunInit(false);
+    //     estateChanged();
+    // }
 
     // TODO: Run estateChanged if estate changes
 
@@ -254,22 +266,22 @@ function DappEstate(props) {
                             </Button>
                         </Modal.Footer>
                     </Modal>
-                    {!owner && (
-                    <SimpleCard title="Select Estate" className="mb-4">
-                        <p>
-                            Enter the address of the estate you wish to manage
-                            <input
-                                type="text"
-                                className="form-control"
-                                name="estateAddress"
-                                placeholder="0x.... Estate contract's Ethereum address"
-                                value={estateAddress}
-                                onChange={(event) => setEstateAddress(event.target.value)}
-                            />
-                        </p>
-                    </SimpleCard>
-                    )}
-                    {owner && (
+                    {/*{!owner && (*/}
+                    {/*<SimpleCard title="Select Estate" className="mb-4">*/}
+                    {/*    <p>*/}
+                    {/*        Enter the address of the estate you wish to manage*/}
+                    {/*        <input*/}
+                    {/*            type="text"*/}
+                    {/*            className="form-control"*/}
+                    {/*            name="estateAddress"*/}
+                    {/*            placeholder="0x.... Estate contract's Ethereum address"*/}
+                    {/*            value={estateAddress}*/}
+                    {/*            onChange={(event) => setEstateAddress(event.target.value)}*/}
+                    {/*        />*/}
+                    {/*    </p>*/}
+                    {/*</SimpleCard>*/}
+                    {/*)}*/}
+                    {/*{owner && (*/}
                         <Fragment>
                             <SimpleCard title="Estate Details" className="mb-4">
                                 <div>
@@ -516,7 +528,7 @@ function DappEstate(props) {
                             </Card>
 
                         </Fragment>
-                    )}
+                    {/*)}*/}
                 </div>
             </EthereumDapp>
     );
