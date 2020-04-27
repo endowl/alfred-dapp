@@ -1,4 +1,4 @@
-import React, {useState, useEffect, Fragment} from "react";
+import React, {useState, useEffect} from "react";
 import { Breadcrumb, SimpleCard} from "@gull";
 import { useWallet } from "use-wallet";
 import EthereumDapp from "./EthereumDapp";
@@ -6,7 +6,6 @@ import {Alert, Button} from "react-bootstrap";
 import { ethers } from 'ethers';
 import bringOutYourDeadFactoryAbi from "../../../abi/bringOutYourDeadFactoryAbi";
 import bringOutYourDeadAbi from "../../../abi/bringOutYourDeadAbi";
-import LinkEtherscanAddress from './LinkEtherscanAddress';
 import LinkEtherscanTx from './LinkEtherscanTx';
 import { Link } from 'react-router-dom';
 import localStorageService from "../../services/localStorageService";
@@ -21,12 +20,9 @@ function NewEstateForm(props) {
     const [oracle, setOracle] = useState('');
     const [executor, setExecutor] = useState('');
 
-    // TODO: Automatically set chainID used in LinkEtherscanAddress components to the current network
-
-    // TODO: Move this to a config file and support multiple networks
+    // TODO: Move this to a config file and support multiple networks automatically
     // const boydFactoryAddress = "0xDEAD78Ed0A13909CB8F6919E32308515373e6d2d";
     // const boydFactoryAddress = "0x0bBc6D455611718aFA0Db939d1C41ABe283ECc8F";  // Ropsten
-    // const boydFactoryAddress = "0xc1A8436f6f0a98346b01B8E855E0BdF9a26e1453";  // Kovan
     const boydFactoryAddress = "0x5Ca258619d7Ea8A81c2f78C25B8AD85151F33CBD";  // Kovan v0.2
 
     const statuses = {
@@ -49,9 +45,7 @@ function NewEstateForm(props) {
         // TODO: Set estate as recovery option for Gnosis Safe
 
         const oracleParam = oracle !== '' ? oracle : ethers.constants.AddressZero;
-        const executorParam = oracle !== '' ? oracle : ethers.constants.AddressZero;
-
-        // const salt = 17;
+        const executorParam = executor !== '' ? executor : ethers.constants.AddressZero;
 
         // TODO: Sanity check oracle and executor addresses
         console.log("Oracle", oracleParam);
@@ -68,9 +62,6 @@ function NewEstateForm(props) {
 
         const expectedEstateAddress = await boydFactory.getEstateAddress(cpk.address, props.salt);
         console.log("Expected estate address: ", expectedEstateAddress);
-
-        // TODO: Check if an estate has already been deployed for this user at this address
-        // TODO: Enable user to enter a salt nonce for testing purposes???
 
         // Prepare calldata for multi-transaction call to Gnosis Safe by way of Contract Proxy Kit
         const boydFactoryInterface = new ethers.utils.Interface(bringOutYourDeadFactoryAbi);
@@ -93,9 +84,6 @@ function NewEstateForm(props) {
                 data: transferOnershipData
             }
         ];
-
-        // console.log("TXs:");
-        // console.log(txs);
 
         // Listen for estate creation event
         let filter = boydFactory.filters.estateCreated(null, cpk.address);
