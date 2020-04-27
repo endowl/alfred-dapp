@@ -53,6 +53,33 @@ function EditExecutor(props) {
     );
 }
 
+
+function EditBeneficiary(props) {
+    return (
+        <Modal show={props.show}>
+            <form>
+                    <Modal.Header closeButton>
+                        <Modal.Title>Change Executor</Modal.Title>
+                    </Modal.Header>
+                    <Modal.Body>
+                            <p>
+                                Address of the beneficiary
+                            </p>
+                            <input type="text" name="beneficiaryInput" className="form-control"/>
+                    </Modal.Body>
+                    <Modal.Footer>
+                        <Button variant="secondary">
+                            Close
+                        </Button>
+                        <Button variant="primary">
+                            Save Changes
+                        </Button>
+                    </Modal.Footer>
+            </form>
+        </Modal>
+    );
+}
+
 // function BeneficiaryPieChart(props) {
 function BeneficiaryPieChart({beneficiaries, name="Beneficiary Shares"}) {
     console.log(beneficiaries);
@@ -69,6 +96,7 @@ function DappEstate(props) {
     const wallet = useWallet();
     const [estateAddress, setEstateAddress] = useState(() => {
         if(props.match.params.address !== undefined) {
+            localStorageService.setItem('estate', props.match.params.address);
             return props.match.params.address;
         }
         let storedEstate = localStorageService.getItem('estate');
@@ -246,6 +274,7 @@ function DappEstate(props) {
                             <SimpleCard title="Estate Details" className="mb-4">
                                 <div>
                                     Estate: <LinkEtherscanAddress address={estateAddress} chainId={chainId}>{estateAddress}</LinkEtherscanAddress>
+                                    {/*<i className="i-File-Clipboard-File--Text" title="Copy to clipboard"/>*/}
                                     {/*<span className="cursor-pointer text-success mr-2">*/}
                                     {/*    <i className="nav-icon i-Pen-2 font-weight-bold" onClick={() => setShowTodo(true)}></i>*/}
                                     {/*</span>*/}

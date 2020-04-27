@@ -1,8 +1,8 @@
-import React, {Component, useState, Fragment} from "react";
-import { Breadcrumb, SimpleCard, CodeViewer } from "@gull";
+import React, {useState, useEffect, Fragment} from "react";
+import { Breadcrumb, SimpleCard} from "@gull";
 import { useWallet } from "use-wallet";
 import EthereumDapp from "./EthereumDapp";
-import {Alert} from "react-bootstrap";
+import {Alert, Button} from "react-bootstrap";
 import { ethers } from 'ethers';
 import bringOutYourDeadFactoryAbi from "../../../abi/bringOutYourDeadFactoryAbi";
 import bringOutYourDeadAbi from "../../../abi/bringOutYourDeadAbi";
@@ -13,7 +13,7 @@ import localStorageService from "../../services/localStorageService";
 const CPK = require('contract-proxy-kit');
 
 
-function NewEstateForm() {
+function NewEstateForm(props) {
     const wallet = useWallet();
     const [status, setStatus] = useState();
     const [txHash, setTxHash] = useState('');
@@ -51,7 +51,7 @@ function NewEstateForm() {
         const oracleParam = oracle !== '' ? oracle : ethers.constants.AddressZero;
         const executorParam = oracle !== '' ? oracle : ethers.constants.AddressZero;
 
-        const salt = 17;
+        // const salt = 17;
 
         // TODO: Sanity check oracle and executor addresses
         console.log("Oracle", oracleParam);
@@ -66,7 +66,7 @@ function NewEstateForm() {
         // Gnosis Contract Proxy Kit
         const cpk = await CPK.create( { ethers, signer: signer } );
 
-        const expectedEstateAddress = await boydFactory.getEstateAddress(cpk.address, salt);
+        const expectedEstateAddress = await boydFactory.getEstateAddress(cpk.address, props.salt);
         console.log("Expected estate address: ", expectedEstateAddress);
 
         // TODO: Check if an estate has already been deployed for this user at this address
@@ -76,7 +76,7 @@ function NewEstateForm() {
         const boydFactoryInterface = new ethers.utils.Interface(bringOutYourDeadFactoryAbi);
         const boydInterface = new ethers.utils.Interface(bringOutYourDeadAbi);
 
-        let newEstateData = boydFactoryInterface.functions.newEstate.encode([oracleParam, executorParam, salt]);
+        let newEstateData = boydFactoryInterface.functions.newEstate.encode([oracleParam, executorParam, props.salt]);
         let transferOnershipData = boydInterface.functions.transferOwnership.encode([wallet.account]);
 
         const txs = [
@@ -101,7 +101,7 @@ function NewEstateForm() {
         let filter = boydFactory.filters.estateCreated(null, cpk.address);
         boydFactory.on(filter, async (fromAddress, toAddress, value, event) => {
             console.log('Estate created!');
-            let address = await boydFactory.getEstateAddress(cpk.address, salt);
+            let address = await boydFactory.getEstateAddress(cpk.address, props.salt);
             console.log('Estate address', address);
             // TODO: Sanity check address matches expected address
             setEstateAddress(address);
@@ -198,6 +198,7 @@ function NewEstateForm() {
                 </div>
 
                 <div className="col-md-12 mb-3">
+                    <input type="hidden" name="salt" value={props.salt} />
                     <button className="btn btn-primary" type="submit" disabled={status}>Create</button>
                 </div>
             </div>
@@ -222,7 +223,14 @@ function NewEstateForm() {
                     Your digital estate has been established on the blockchain!
                 </Alert.Heading>
                 <p>
-                    The smart contract's address is <strong><Link to={'/dapp/estate/' + estateAddress} address={estateAddress}>{estateAddress}</Link></strong>
+                    The smart contract's address is <strong>{estateAddress}</strong>
+                </p>
+                <p>
+                    <Link to={'/dapp/estate/' + estateAddress} address={estateAddress}>
+                        <Button variant="success" className="btn-raised btn-raised-success m-1 text-capitalize btn-lg">
+                            Access Your New Estate
+                        </Button>
+                    </Link>
                 </p>
             </Alert>
             <Alert variant="danger" show={status === statuses.ERROR}>
@@ -246,32 +254,87 @@ function NewEstateForm() {
 }
 
 
-class DappNewEstate extends Component {
+function DappNewEstate(props) {
+    const [estates, setEstates] = useState([]);
+    const [nextSalt, setNextSalt] = useState(0);
+    const wallet = useWallet();
+    useEffect(() => {
+        async function fetchData() {
+            console.log(wallet);
+            if(wallet.connected) {
+                let provider = new ethers.providers.Web3Provider(wallet.ethereum);
+                const signer = provider.getSigner(0);
 
-    render() {
-        return (
-            <EthereumDapp>
-                <div>
-                    <Breadcrumb
-                        routeSegments={[
-                            {name: "Home", path: "/"},
-                            {name: "dApp", path: "/dapp"},
-                            {name: "New Estate"}
-                        ]}
-                    ></Breadcrumb>
-                    <SimpleCard title="Create New Estate" className="mb-4">
+                // Bring Out Your Dead (Alfred Estate) Factory
+                // TODO: Move factory address to a global config
+                const boydFactoryAddress = "0x5Ca258619d7Ea8A81c2f78C25B8AD85151F33CBD";  // Kovan v0.2
+                let boydFactory = new ethers.Contract(boydFactoryAddress, bringOutYourDeadFactoryAbi, signer);
+
+                // Gnosis Contract Proxy Kit
+                const cpk = await CPK.create({ethers, signer: signer});
+
+                // Check for pre-existing estate deployments
+                let salt = 0;
+                let estatesDetected = [];
+                while(true) {
+                    console.log("Checking for estate with salt nonce: ", salt);
+                    const expectedEstateAddress = await boydFactory.getEstateAddress(cpk.address, salt);
+                    // Check if the estate exists!
+                    let code = await provider.getCode(expectedEstateAddress);
+                    if(code !== '0x') {
+                        estatesDetected.push(expectedEstateAddress);
+                        setEstates(estatesDetected);
+                        salt++;
+                    } else {
+                        break;
+                    }
+                }
+                setNextSalt(salt);
+            }
+        }
+        fetchData();
+    }, [wallet.connected, wallet.account]);
+
+    // TODO: Revisit breadcrumbs flow
+
+    return (
+        <EthereumDapp>
+            <div>
+                <Breadcrumb
+                    routeSegments={[
+                        {name: "Home", path: "/"},
+                        {name: "dApp", path: "/dapp"},
+                        {name: "New Estate"}
+                    ]}
+                ></Breadcrumb>
+                <SimpleCard title="Create New Estate" className="mb-4">
+                    <p>
+                        Submit this form to create your new digital estate on the Ethereum blockchain.  An estate allows you to manage, spend, and invest your assets while planning for the future.
+                    </p>
+                    <p>
+                        A Gnosis Safe will be generated for you and linked to your estate.  Should anything ever happen to you, your estate will handle inheritance according to your wishes.
+                    </p>
+                    <NewEstateForm salt={nextSalt}/>
+                </SimpleCard>
+                {estates.length > 0 && (
+                    <SimpleCard title="Open An Existing Estate" className="mb-4">
                         <p>
-                            Submit this form to create your new digital estate on the Ethereum blockchain.  An estate allows you to manage, spend, and invest your assets while planning for the future.
+                            Select an estate below to open and manage it:
                         </p>
-                        <p>
-                            A Gnosis Safe will be generated for you and linked to your estate.  Should anything ever happen to you, your estate will handle inheritance according to your wishes.
-                        </p>
-                        <NewEstateForm/>
+                        <ol>
+                        {estates.map((estate, index) => (
+                            <li key={index}>
+                                <Link to={'/dapp/estate/' + estate}>
+                                    {estate}
+                                </Link>
+                            </li>
+                        ))}
+                        </ol>
                     </SimpleCard>
-                </div>
-            </EthereumDapp>
-        );
-    }
+                )}
+            </div>
+        </EthereumDapp>
+    );
 }
 
 export default DappNewEstate;
