@@ -2,6 +2,9 @@ import axios from "axios"
 import {contract} from './contractConnect'
 import {getStakedAmount} from './getStakedAmount'
 
+const NETWORK = 'mainnet';
+const COMPOUND_API_CTOKEN_URL = `https://api.compound.finance/api/v2/ctoken?network=${NETWORK}`;
+
 export async function streaming (){
     let address = window.ethereum.selectedAddress;
 
@@ -11,18 +14,17 @@ export async function streaming (){
     
     // let streaming equal {stake * apy}
     let loadMessage = () => {
-      axios.get('/api/messages', {responseType: 'arraybuffer'})
+        return axios.get(COMPOUND_API_CTOKEN_URL)
         .then(function (response) {
           console.log('Response from the server: ', response)
-          let msg = Message.decode(response.data)
-          console.log('Decoded message', msg)
-          document.getElementById('content').innerText = JSON.stringify(msg, null, 2)
+          document.getElementById('content').innerText = JSON.stringify(response.data.cToken, null, 2)
         })
         .catch(function (response) {
           console.log(response)
         })
     }
-    
+
+    await loadMessage()
     // let fundedTotal equal {accumulatedValue - staked}
     
     // return fundedTotal
