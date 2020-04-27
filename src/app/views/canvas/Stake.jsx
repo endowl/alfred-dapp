@@ -1,5 +1,6 @@
 import React, { Component, Fragment } from "react";
 import { getStakedAmount } from "./utils/getStakedAmount";
+import { streaming } from "./utils/streaming";
 import StakingModal from "./StakingModal";
 
 class Stake extends Component {
@@ -13,7 +14,7 @@ class Stake extends Component {
           leftSubtitle: "staked",
           rightIcon: "i-Financial",
           rightTitle: "4.0210",
-          rightSubtitle: "interest funded"
+          rightSubtitle: "Streaming"
         }
       ],
       stake: null,
@@ -21,6 +22,7 @@ class Stake extends Component {
     };
 
     this.getStake = this.getStake.bind(this)
+    this.getStreaming = this.getStreaming.bind(this)
   }
 
   getStake = () => {
@@ -32,9 +34,14 @@ class Stake extends Component {
     )
   }
 
+  getStreaming = () => {
+    streaming()
+  }
+
   componentDidMount(){
     this.getStake()
     console.log("state:",this.state)
+    this.getStreaming()
   }
 
   render() {
