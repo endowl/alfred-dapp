@@ -1,3 +1,44 @@
+# Alfred
+
+Alfred is a decentralized crypto estate planner.
+
+Over the next 40 years, the “Great Wealth Transfer” will see Millennials inherit somewhere between $60 and $70 Trillion dollars from Baby Boomers. Millennials increasingly recognize the long-term value of digital assets and embrace them as a part of their portfolio.
+
+In a July 2019 survey from Bankrate, “Millennials picked cryptocurrencies as their top long-term investment about 9 percent of the time – about triple the rate of Generation X.” If and when Millennials *do* succeed in getting their parents and grandparents to invest in digital assets, the question will inevitably arise: "what happens to this cryptocurrency after I die?"
+
+Website: 
+
+## How it works
+To secure your digital estate, simply create or sync a Gnosis Safe, designate your beneficiaries and how much of your assets they should receive, and set the check-in period on our decentralized dead man’s switch.
+
+### Features
+
+#### Create your estate
+Alfred uses the Gnosis Safe contract proxy kit to let users create or sync their estate as part of a Gnosis Safe. The dApp uses transaction batching to create or sync the Gnosis Safe and set the owner as the individual deploying the transaction.
+
+[Create estate screenshot](https://github.com/BatmansButler/alfred-dapp/images/.png)
+
+#### Designate beneficiaries and their inheritance
+Set the addresses you want to receive your assets and assign shares to allow them to claim their inheritance. The Gnosis Recovery Module lets you allow the executor and/or a set number of beneficiaries the ability to recover the Safe if needed.
+
+Once you've deposited funds, use the Token Tracker on the Estate Dashboard to keep track of the value of your estate.
+
+[Designate beneficiaries screenshot](https://github.com/BatmansButler/alfred-dapp/images/.png)
+
+#### Generate proof-of-life using the decentralized dead man's switch
+Set the number of days you want to go between checking in with Alfred and activate your estate plan with the flip of a switch. Providing proof-of-life is as simple as clicking the "Check-In" button on your Estate Dashboard.
+
+[DMS screenshot](https://github.com/BatmansButler/alfred-dapp/images/.png)
+
+#### Have we got your interest? Allow us to hodl it with RDai!
+Support our work through direct donations OR stake with RDai and allow us to keep the interest to fund continued development *without* losing your assets.
+
+[DMS screenshot](https://github.com/BatmansButler/alfred-dapp/images/.png)
+
+## Warning
+Alfred's code has NOT been audited. Until we can convince him a security audit *doesn't* involve the IRS, please don't deposit more funds than you're willing to lose.
+___________________________________________________________________________________________________________________________
+
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
 ## Available Scripts
