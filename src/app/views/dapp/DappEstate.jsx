@@ -16,6 +16,18 @@ import bringOutYourDeadFactoryAbi from "../../../abi/bringOutYourDeadFactoryAbi"
 
 const CPK = require('contract-proxy-kit');
 
+function BeneficiaryPieChart({beneficiaries, name = "Beneficiary Shares"}) {
+    console.log(beneficiaries);
+    let data = [];
+    for (let i = 0; i < beneficiaries.length; i++) {
+        data.push({name: beneficiaries[i]['address'], value: beneficiaries[i]['shares']})
+    }
+    return (
+        <PieChart data={data} name={name} />
+    );
+}
+
+
 function EditExecutor(props) {
     const [show, setShow] = useState(false);
     const [executor, setExecutor] = useState(props.executor);
@@ -24,7 +36,7 @@ function EditExecutor(props) {
         setShow(false);
     };
 
-    // TODO: Handle form submission, submit transaction, monitor and display tx status
+    // TODO: Handle executor change
 
     return (
         <Fragment>
@@ -54,19 +66,6 @@ function EditExecutor(props) {
                 </form>
             </Modal>
         </Fragment>
-    );
-}
-
-
-// function BeneficiaryPieChart(props) {
-function BeneficiaryPieChart({beneficiaries, name = "Beneficiary Shares"}) {
-    console.log(beneficiaries);
-    let data = [];
-    for (let i = 0; i < beneficiaries.length; i++) {
-        data.push({name: beneficiaries[i]['address'], value: beneficiaries[i]['shares']})
-    }
-    return (
-        <PieChart data={data} name={name}></PieChart>
     );
 }
 
@@ -109,17 +108,15 @@ function DappEstate(props) {
         let provider = new ethers.providers.Web3Provider(wallet.ethereum);
         const signer = provider.getSigner(0);
         const cpk = await CPK.create({ethers, signer: signer});
+
         // Prepare calldata for multi-transaction call to Gnosis Safe by way of Contract Proxy Kit
         const boydInterface = new ethers.utils.Interface(bringOutYourDeadAbi);
         const moduleManagerInterface = new ethers.utils.Interface(gnosisModuleManagerAbi);
-
-        // TODO: Check if recovery module is to be enabled or disabled - isGnosisSafeRecoveryEnabled, act accordingly
 
         let txs = [];
         if(gnosisRecoveryFormEnabled && !isGnosisSafeRecoveryEnabled) {
             // Enable estate to serve as a recovery module for gnosis safe
             let enableModuleData = moduleManagerInterface.functions.enableModule.encode([estateAddress]);
-            // TODO: include transaction data to set recovery config on estate contract
             txs.push({
                 operation: CPK.CALL,
                 to: gnosisSafe,
@@ -156,7 +153,7 @@ function DappEstate(props) {
             data: beneficiarySettingsData
         });
 
-        // TODO: Listen for events and update state accordingly
+        // TODO: Listen for events and update accordingly
 
         // Send multi-TX through Gnosis Safe, causing Safe to be deployed if it hasn't yet
         try {
@@ -169,8 +166,6 @@ function DappEstate(props) {
             console.log(e);
             // setStatus(statuses.ERROR);
         }
-
-
     }
 
 
@@ -300,31 +295,9 @@ function DappEstate(props) {
                 }
             }
 
-            // TODO: Use moduleManagerInterface.functions.getModules() or .getModulesPaginated(address,uint256)
-            //       on gnosis safe to determine if recovery module is enabled and get it's linked list neighbor
-
             // TODO: Load Dead Man's Switch settings from estate
 
             refreshBeneficiaries();
-
-            // // Load beneficiary details. NOTE: estateContract.getBeneficiaryDetails() is broken currently, so doing this
-            // let bs = [];
-            // let b = null;
-            // let bAddress;
-            // let bShares;
-            // do {
-            //     try {
-            //         console.log("Try b: " + bs.length);
-            //         bAddress = await estateContract.beneficiaries(bs.length);
-            //         bShares = await estateContract.beneficiaryShares(bAddress);
-            //         b = {address: bAddress, shares: bShares.toString()};
-            //         bs.push(b);
-            //     } catch (e) {
-            //         b = null;
-            //     }
-            // } while (b !== null);
-            // setBeneficiaries(bs);
-            // console.log(bs);
 
             // Determine tracked assets
             let _trackedTokens = [];
@@ -394,16 +367,16 @@ function DappEstate(props) {
                 <Breadcrumb
                     routeSegments={[
                         {name: "Home", path: "/"},
-                        {name: "dApp", path: "/dapp"},
+                        {name: "dApp", path: "/dapp/new-estate"},
                         {name: "Estate"}
                     ]}
-                ></Breadcrumb>
+                />
                 <Modal centered={true} show={showTodo} onHide={() => setShowTodo(false)}>
                     <Modal.Header closeButton>
                         <Modal.Title>Under Construction</Modal.Title>
                     </Modal.Header>
                     <Modal.Body className="text-center">
-                        <img src="/assets/images/under-construction.png"/>
+                        <img src="/assets/images/under-construction.png" alt="Under Construction" />
                         <h3>Coming soon!</h3>
                     </Modal.Body>
                     <Modal.Footer>
@@ -449,22 +422,6 @@ function DappEstate(props) {
                     </form>
                 </Modal>
 
-                {/*{!owner && (*/}
-                {/*<SimpleCard title="Select Estate" className="mb-4">*/}
-                {/*    <p>*/}
-                {/*        Enter the address of the estate you wish to manage*/}
-                {/*        <input*/}
-                {/*            type="text"*/}
-                {/*            className="form-control"*/}
-                {/*            name="estateAddress"*/}
-                {/*            placeholder="0x.... Estate contract's Ethereum address"*/}
-                {/*            value={estateAddress}*/}
-                {/*            onChange={(event) => setEstateAddress(event.target.value)}*/}
-                {/*        />*/}
-                {/*    </p>*/}
-                {/*</SimpleCard>*/}
-                {/*)}*/}
-                {/*{owner && (*/}
                 <Fragment>
                     <SimpleCard title="Estate Details" className="mb-4">
                         <div>
@@ -502,18 +459,15 @@ function DappEstate(props) {
                                 <span> (None) </span>
                             ) : (
                                 <span>
-                                            <LinkEtherscanAddress address={executor}
-                                                                  chainId={chainId}>{executor}</LinkEtherscanAddress>
-                                        </span>
+                                    <LinkEtherscanAddress address={executor} chainId={chainId}>{executor}</LinkEtherscanAddress>
+                                </span>
                             )}
                             <span className="cursor-pointer text-success mr-2">
-                                        <i className="nav-icon i-Pen-2 font-weight-bold"
-                                           onClick={() => setShowTodo(true)}></i>
-                                    </span>
+                                <i className="nav-icon i-Pen-2 font-weight-bold" onClick={() => setShowTodo(true)} />
+                            </span>
                             <span className="cursor-pointer text-danger mr-2">
-                                        <i className="nav-icon i-Close-Window font-weight-bold"
-                                           onClick={() => setShowTodo(true)}></i>
-                                    </span>
+                                <i className="nav-icon i-Close-Window font-weight-bold" onClick={() => setShowTodo(true)} />
+                            </span>
 
                             {isOwner && (
                                 <EditExecutor executor={executor}/>
@@ -605,14 +559,9 @@ function DappEstate(props) {
                                             onChange={(event) => setGnosisRecoveryFormMinBeneficiaries(event.target.value)}
                                         />
                                     </div>
-                                    <button
-                                        type="submit"
-                                        // onClick={(event) => {event.preventDefault(); setShowTodo(true)}}
-                                        className="btn btn-primary"
-                                        >
+                                    <button type="submit" className="btn btn-primary">
                                         Update
                                     </button>
-
                                 </Form>
                             </SimpleCard>
                         </div>
@@ -662,12 +611,12 @@ function DappEstate(props) {
                                                                     <span className="cursor-pointer text-success mr-2">
                                                                         <i className="nav-icon i-Pen-2 font-weight-bold"
                                                                            title="Edit beneficiary"
-                                                                           onClick={() => setShowTodo(true)}></i>
+                                                                           onClick={() => setShowTodo(true)} />
                                                                     </span>
                                                             <span className="cursor-pointer text-danger mr-2">
                                                                         <i className="nav-icon i-Close-Window font-weight-bold"
                                                                            title="Remove beneficiary"
-                                                                           onClick={() => setShowTodo(true)}></i>
+                                                                           onClick={() => setShowTodo(true)} />
                                                                     </span>
                                                         </td>
                                                     </tr>
@@ -675,7 +624,7 @@ function DappEstate(props) {
                                                 </tbody>
                                             </table>
                                         </div>
-                                        <BeneficiaryPieChart beneficiaries={beneficiaries}></BeneficiaryPieChart>
+                                        <BeneficiaryPieChart beneficiaries={beneficiaries} />
                                     </Fragment>
                                 )}
                             </div>
@@ -686,10 +635,10 @@ function DappEstate(props) {
                         <Card.Body>
                             <div className="card-title d-flex align-items-center">
                                 <h3 className="mb-0">Asset Holdings</h3>
-                                <span className="flex-grow-1"></span>
+                                <span className="flex-grow-1" />
                                 <span className="cursor-pointer text-success mr-2">
                                             <i className="nav-icon i-Add font-weight-bold" title="Track New Asset"
-                                               onClick={() => setShowTodo(true)}></i>
+                                               onClick={() => setShowTodo(true)} />
                                         </span>
                             </div>
                             <div>
@@ -704,8 +653,7 @@ function DappEstate(props) {
                                                     <div
                                                         className="card card-icon-bg card-icon-bg-primary o-hidden mb-4">
                                                         <div className="card-body text-center">
-                                                            <span
-                                                                className={"i- icon icon-" + asset.symbol.toLowerCase()}></span>
+                                                            <span className={"i- icon icon-" + asset.symbol.toLowerCase()} />
                                                             <div className="content">
                                                                 <p className="text-muted mt-2 mb-0 text-capitalize">
                                                                     {asset.name}
@@ -733,8 +681,7 @@ function DappEstate(props) {
                                                 {assets.map((asset, index) => (
                                                     <tr key={asset.address}>
                                                         <th scope="row">
-                                                            <LinkEtherscanAddress address={asset.address}
-                                                                                  chainId={chainId}>
+                                                            <LinkEtherscanAddress address={asset.address} chainId={chainId}>
                                                                 {asset.name}
                                                             </LinkEtherscanAddress>
                                                         </th>
@@ -742,19 +689,19 @@ function DappEstate(props) {
                                                             {asset.balance} {asset.symbol}
                                                         </td>
                                                         <td>
-                                                                    <span className="cursor-pointer text-success mr-2">
-                                                                        <i className="nav-icon i-Arrow-Forward-2 font-weight-bold"
-                                                                           title="Send"
-                                                                           onClick={() => setShowTodo(true)}></i>
-                                                                    </span>
+                                                            <span className="cursor-pointer text-success mr-2">
+                                                                <i className="nav-icon i-Arrow-Forward-2 font-weight-bold"
+                                                                   title="Send"
+                                                                   onClick={() => setShowTodo(true)} />
+                                                            </span>
                                                             {asset.address != ethers.constants.AddressZero && (
                                                                 <Fragment>
-                                                                        <span
-                                                                            className="cursor-pointer text-danger mr-2">
-                                                                            <i className="nav-icon i-Close-Window font-weight-bold"
-                                                                               title="Stop tracking asset"
-                                                                               onClick={() => setShowTodo(true)}></i>
-                                                                        </span>
+                                                                    <span
+                                                                        className="cursor-pointer text-danger mr-2">
+                                                                        <i className="nav-icon i-Close-Window font-weight-bold"
+                                                                           title="Stop tracking asset"
+                                                                           onClick={() => setShowTodo(true)} />
+                                                                    </span>
                                                                 </Fragment>
                                                             )}
                                                         </td>

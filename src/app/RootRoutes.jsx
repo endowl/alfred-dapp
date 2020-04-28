@@ -27,7 +27,7 @@ const redirectRoute = [
   {
     path: "/",
     exact: true,
-    component: () => <Redirect to="/dashboard/v1" />
+    component: () => <Redirect to="/dapp/new-estate" />
   }
 ];
 
