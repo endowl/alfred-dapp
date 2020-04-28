@@ -7,10 +7,12 @@ import {Form, Modal, Button} from "react-bootstrap";
 import {ethers} from 'ethers';
 import bringOutYourDeadAbi from "../../../abi/bringOutYourDeadAbi";
 import erc20Abi from "../../../abi/erc20";
+import gnosisModuleManagerAbi from "../../../abi/gnosisModuleManagerAbi";
 import LinkEtherscanAddress from './LinkEtherscanAddress';
 import localStorageService from "../../services/localStorageService";
 import PieChart from "./PieChart";
 import {CopyToClipboard} from 'react-copy-to-clipboard';
+import bringOutYourDeadFactoryAbi from "../../../abi/bringOutYourDeadFactoryAbi";
 
 const CPK = require('contract-proxy-kit');
 
@@ -95,6 +97,82 @@ function DappEstate(props) {
     const [chainId, setChainId] = useState(1);
     const [editBeneficiaryAddress, setEditBeneficiaryAddress] = useState('');
     const [editBeneficiaryShares, setEditBeneficiaryShares] = useState('');
+    const [isGnosisSafeRecoveryEnabled, setIsGnosisSafeRecoveryEnabled] = useState(false);
+    const [isGnosisSafeRecoveryExecutor, setIsGnosisSafeRecoveryExecutor] = useState(0);
+    const [gnosisSafeRecoveryMinimumBeneficiaries, setGnosisSafeRecoveryMinimumBeneficiaries] = useState(0);
+    const [gnosisRecoveryFormEnabled, setGnosisRecoveryFormEnabled] = useState(false);
+    const [gnosisRecoveryFormExecutor, setGnosisRecoveryFormExecutor] = useState(false);
+    const [gnosisRecoveryFormMinBeneficiaries, setGnosisRecoveryFormMinBeneficiaries] = useState('');
+
+    async function handleUpdateGnosisSafeRecovery(event) {
+        event.preventDefault();
+        let provider = new ethers.providers.Web3Provider(wallet.ethereum);
+        const signer = provider.getSigner(0);
+        const cpk = await CPK.create({ethers, signer: signer});
+        // Prepare calldata for multi-transaction call to Gnosis Safe by way of Contract Proxy Kit
+        const boydInterface = new ethers.utils.Interface(bringOutYourDeadAbi);
+        const moduleManagerInterface = new ethers.utils.Interface(gnosisModuleManagerAbi);
+
+        // TODO: Check if recovery module is to be enabled or disabled - isGnosisSafeRecoveryEnabled, act accordingly
+
+        let txs = [];
+        if(gnosisRecoveryFormEnabled && !isGnosisSafeRecoveryEnabled) {
+            // Enable estate to serve as a recovery module for gnosis safe
+            let enableModuleData = moduleManagerInterface.functions.enableModule.encode([estateAddress]);
+            // TODO: include transaction data to set recovery config on estate contract
+            txs.push({
+                operation: CPK.CALL,
+                to: gnosisSafe,
+                value: 0,
+                data: enableModuleData
+            });
+        } else if(!gnosisRecoveryFormEnabled && isGnosisSafeRecoveryEnabled) {
+            // Disable estate from serving as a recovery module for gnosis safe
+            // NOTE: Currently making the unsafe assumption that no other recovery modules are present on the gnosis safe
+            // TODO: Use moduleManagerInterface.functions.getModules() or .getModulesPaginated(address,uint256) to determine the correct linked list target
+            let disableModuleData = moduleManagerInterface.functions.disableModule.encode(["0x0000000000000000000000000000000000000001", estateAddress]);
+            txs.push({
+                operation: CPK.CALL,
+                to: gnosisSafe,
+                value: 0,
+                data: disableModuleData
+            });
+        }
+
+        const executorSettingsData = boydInterface.functions.setIsExecutorRequiredForSafeRecovery.encode([gnosisRecoveryFormExecutor]);
+        const beneficiarySettingsData = boydInterface.functions.setBeneficiariesRequiredForSafeRecovery.encode([gnosisRecoveryFormMinBeneficiaries]);
+
+        txs.push({
+            operation: CPK.CALL,
+            to: estateAddress,
+            value: 0,
+            data: executorSettingsData
+        });
+
+        txs.push({
+            operation: CPK.CALL,
+            to: estateAddress,
+            value: 0,
+            data: beneficiarySettingsData
+        });
+
+        // TODO: Listen for events and update state accordingly
+
+        // Send multi-TX through Gnosis Safe, causing Safe to be deployed if it hasn't yet
+        try {
+            // let cpkHash = await cpk.execTransactions(txs, {gasLimit: 5000000});
+            let cpkHash = await cpk.execTransactions(txs);
+            // setTxHash(cpkHash.hash);
+            console.log(cpkHash);
+            // setStatus(statuses.PROCESSING);
+        } catch (e) {
+            console.log(e);
+            // setStatus(statuses.ERROR);
+        }
+
+
+    }
+
 
     async function handleAddBeneficiary(event) {
         event.preventDefault();
@@ -171,7 +249,6 @@ function DappEstate(props) {
             // NOTE: This creates a Gnosis Contracty Proxy Kit object
             // NOTE: it is associated with browser wallet address automatically, not the Alfred contract
             const cpk = await CPK.create({ethers, signer: signer});
-            // cpk.setOwnerAccount(estateAddress);  // This does not have the expected effect
             setGnosisSafe(cpk.address);
 
             let estateContract;
@@ -179,13 +256,54 @@ function DappEstate(props) {
                 estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
                 console.log(estateContract);
                 setOwner(await estateContract.owner());
+                setIsOwner(owner === wallet.account);
                 setExecutor(await estateContract.executor());
                 setLiveliness(await estateContract.liveliness());
-                setIsOwner(owner === wallet.account);
+
+                let executorRequired = await estateContract.isExecutorRequiredForSafeRecovery();
+                setIsGnosisSafeRecoveryExecutor(executorRequired);
+                setGnosisRecoveryFormExecutor(executorRequired);
+                console.log("Executor required: ", executorRequired);
+
+                let minBeneficiaries = await estateContract.beneficiariesRequiredForSafeRecovery();
+                setGnosisSafeRecoveryMinimumBeneficiaries(minBeneficiaries);
+                setGnosisRecoveryFormMinBeneficiaries(minBeneficiaries);
+                console.log("Minimum beneficiaries: ", minBeneficiaries);
             } catch (e) {
-                console.log("Failed while updating estate details, possibly a bad address/ENS name");
+                console.log("Failed while fetching estate details");
                 return;
             }
+
+            // Determine if Gnosis Safe Estate Recovery Module is enabled in Gnosis Safe
+            const safe = new ethers.Contract(cpk.address, gnosisModuleManagerAbi, signer);
+            const modules = await safe.getModules();
+            console.log("Modules", modules);
+            let enabled = false;
+            if(modules.length > 0) {
+                if(modules.length === 10) {
+                    // TODO: Handle situation where there may be more than 10 modules (getModules() only returns first 10)
+                    //       Will have to use ModuleManager.getModulesPaginated(...)
+                    console.log("Modules list has 10 entries, possibility of this contract being past end of list")
+                }
+                for (let i = 0; i < modules.length; i++) {
+                    if(ethers.utils.getAddress(modules[i]) === ethers.utils.getAddress(estateAddress)) {
+                        enabled = true;
+                        break;
+                    }
+                }
+                if (enabled) {
+                    setIsGnosisSafeRecoveryEnabled(true);
+                    setGnosisRecoveryFormEnabled(true);
+                } else {
+                    setIsGnosisSafeRecoveryEnabled(false);
+                    setGnosisRecoveryFormEnabled(false);
+                }
+            }
+
+            // TODO: Use moduleManagerInterface.functions.getModules() or .getModulesPaginated(address,uint256)
+            //       on gnosis safe to determine if recovery module is enabled and get it's linked list neighbor
+
+            // TODO: Load Dead Man's Switch settings from estate
 
             refreshBeneficiaries();
 
@@ -353,7 +471,9 @@ function DappEstate(props) {
                             Estate: <LinkEtherscanAddress address={estateAddress} chainId={chainId}>{estateAddress}</LinkEtherscanAddress>
                         </div>
                         <div>
-                            Gnosis Safe: <LinkEtherscanAddress address={gnosisSafe} chainId={chainId}>{gnosisSafe}</LinkEtherscanAddress>
+                            Gnosis Safe:
+                            {/*<LinkEtherscanAddress address={gnosisSafe} chainId={chainId}>{gnosisSafe}</LinkEtherscanAddress>*/}
+                            <a href={'https://gnosis-safe.io/app/#/safes/' + gnosisSafe} target="_blank">{gnosisSafe}</a>
                         </div>
                         <div>
                             Owner: <LinkEtherscanAddress address={owner} chainId={chainId}>{owner}</LinkEtherscanAddress>
@@ -401,59 +521,111 @@ function DappEstate(props) {
                         </div>
                     </SimpleCard>
 
-                    <SimpleCard title="Dead Man's Switch" className="mb-4">
-                        <Form>
-                            <Form.Check type="switch" id="deadManEnabled" label="Enabled"/>
-                            <div className="form-group mb-3">
-                                <label htmlFor="deadManCheckInDays">Maximum number of days between Check-ins</label>
-                                <input
-                                    className="form-control"
-                                    id="deadManCheckInDays"
-                                    placeholder="Check-in period in days"
-                                />
-                            </div>
-                        </Form>
-                        <div className="row">
-                            <div className="col-lg-3 col-md-6 col-sm-6">
-                                <Button
-                                    key="primary"
-                                    variant="primary"
-                                    size="lg"
-                                    className="m-1 mb-4 text-capitalize d-block w-100 my-2"
-                                    // className="d-block w-100 my-2 text-capitalize"
-                                    onClick={() => setShowTodo(true)}
-                                >
-                                    I'm Alive - Check-in Now!
-                                </Button>
-                            </div>
-                        </div>
-                        <div className="row">
-                            <div className="col-lg-3 col-md-6 col-sm-6">
-                                <div className="card card-icon-bg card-icon-bg-primary o-hidden mb-4">
-                                    <div className="card-body text-center">
-                                        <i className="i-Stopwatch"></i>
-                                        <div className="content">
-                                            <p className="text-muted mt-2 mb-0 text-capitalize">
-                                                Last Check-In
-                                            </p>
-                                            <p className="lead text-primary text-24 mb-2 text-capitalize">
-                                                ...&nbsp;days
-                                            </p>
+                    <div className="row">
+                        <div className="col-lg-6">
+                            <SimpleCard title="Dead Man's Switch" className="mb-4">
+                                <Form>
+                                    <Form.Check type="switch" id="deadManEnabled" label="Enabled"/>
+                                    <div className="form-group mb-3">
+                                        <label htmlFor="deadManCheckInDays">Maximum number of days between Check-ins</label>
+                                        <input
+                                            className="form-control"
+                                            id="deadManCheckInDays"
+                                            placeholder="Check-in period in days"
+                                        />
+                                    </div>
+                                </Form>
+                                <div className="row">
+                                    <div className="col-lg-6 col-md-12 col-sm-12">
+                                        <Button
+                                            key="primary"
+                                            variant="primary"
+                                            size="lg"
+                                            className="m-1 mb-4 text-capitalize d-block w-100 my-2"
+                                            // className="d-block w-100 my-2 text-capitalize"
+                                            onClick={() => setShowTodo(true)}
+                                        >
+                                            I'm Alive - Check-in Now!
+                                        </Button>
+                                    </div>
+                                </div>
+                                <div className="row">
+                                    <div className="col-lg-6 col-md-12 col-sm-12">
+                                        <div className="card card-icon-bg card-icon-bg-primary o-hidden mb-4">
+                                            <div className="card-body text-center">
+                                                <i className="i-Stopwatch"/>
+                                                <div className="content">
+                                                    <p className="text-muted mt-2 mb-0 text-capitalize">
+                                                        Last Check-In
+                                                    </p>
+                                                    <p className="lead text-primary text-24 mb-2 text-capitalize">
+                                                        ...&nbsp;days
+                                                    </p>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            </SimpleCard>
                         </div>
-                    </SimpleCard>
+                        <div className="col-lg-6">
+
+                            <SimpleCard title="Gnosis Safe Estate Recovery Module" className="mb-4">
+                                <Form onSubmit={handleUpdateGnosisSafeRecovery}>
+                                    <div className="mb-3">
+                                        <Form.Check
+                                            type="switch"
+                                            id="gnosisSafeRecoveryEnabled"
+                                            label="Enabled"
+                                            checked={gnosisRecoveryFormEnabled}
+                                            onChange={(event) => setGnosisRecoveryFormEnabled(event.target.checked)}
+                                        />
+                                    </div>
+                                    <div className="form-group mb-1">
+                                        <label>Parties required to recover gnosis safe:</label>
+                                        <Form.Check
+                                            type="switch"
+                                            id="gnosisSafeRecoveryExecutor"
+                                            label="Executor"
+                                            checked={gnosisRecoveryFormExecutor}
+                                            onChange={(event) => setGnosisRecoveryFormExecutor(event.target.checked)}
+                                        />
+                                    </div>
+
+                                    <div className="form-group mb-3">
+                                        <label htmlFor="gnosisSafeRecoveryMinBeneficiaries">Beneficiaries, minimum number:</label>
+                                        <input
+                                            className="form-control"
+                                            id="gnosisSafeRecoveryMinBeneficiaries"
+                                            placeholder=""
+                                            type="number"
+                                            min="1"
+                                            step="1"
+                                            value={gnosisRecoveryFormMinBeneficiaries}
+                                            onChange={(event) => setGnosisRecoveryFormMinBeneficiaries(event.target.value)}
+                                        />
+                                    </div>
+                                    <button
+                                        type="submit"
+                                        // onClick={(event) => {event.preventDefault(); setShowTodo(true)}}
+                                        className="btn btn-primary"
+                                        >
+                                        Update
+                                    </button>
+
+                                </Form>
+                            </SimpleCard>
+                        </div>
+                    </div>
 
                     <Card className="mb-4">
                         <Card.Body>
                             <div className="card-title d-flex align-items-center">
                                 <h3 className="mb-0">Beneficiaries</h3>
-                                <span className="flex-grow-1"></span>
+                                <span className="flex-grow-1" />
                                 <span className="cursor-pointer text-success mr-2">
                                     <i className="nav-icon i-Add font-weight-bold" title="Add New Beneficiary"
-                                       onClick={() => setShowEditBeneficiary(true)}></i>
+                                       onClick={() => setShowEditBeneficiary(true)} />
                                 </span>
                             </div>
                             <div>

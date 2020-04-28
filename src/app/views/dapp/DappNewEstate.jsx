@@ -11,6 +11,11 @@ import { Link } from 'react-router-dom';
 import localStorageService from "../../services/localStorageService";
 const CPK = require('contract-proxy-kit');
 
+// TODO: Move this to a config file and support multiple networks automatically
+// const boydFactoryAddress = "0xDEAD78Ed0A13909CB8F6919E32308515373e6d2d";
+// const boydFactoryAddress = "0x0bBc6D455611718aFA0Db939d1C41ABe283ECc8F";  // Ropsten
+// const boydFactoryAddress = "0x5Ca258619d7Ea8A81c2f78C25B8AD85151F33CBD";  // Kovan v0.2
+const boydFactoryAddress = "0xDEAD120FB5Aad12a3D3cAd140C66dad2A6739422";  // v0.3.1 Kovan
 
 function NewEstateForm(props) {
     const wallet = useWallet();
@@ -19,11 +24,6 @@ function NewEstateForm(props) {
     const [estateAddress, setEstateAddress] = useState('');
     const [oracle, setOracle] = useState('');
     const [executor, setExecutor] = useState('');
-
-    // TODO: Move this to a config file and support multiple networks automatically
-    // const boydFactoryAddress = "0xDEAD78Ed0A13909CB8F6919E32308515373e6d2d";
-    // const boydFactoryAddress = "0x0bBc6D455611718aFA0Db939d1C41ABe283ECc8F";  // Ropsten
-    const boydFactoryAddress = "0x5Ca258619d7Ea8A81c2f78C25B8AD85151F33CBD";  // Kovan v0.2
 
     const statuses = {
         PROMPTING: 'prompting',
@@ -67,8 +67,11 @@ function NewEstateForm(props) {
         const boydFactoryInterface = new ethers.utils.Interface(bringOutYourDeadFactoryAbi);
         const boydInterface = new ethers.utils.Interface(bringOutYourDeadAbi);
 
+
         let newEstateData = boydFactoryInterface.functions.newEstate.encode([oracleParam, executorParam, props.salt]);
-        let transferOnershipData = boydInterface.functions.transferOwnership.encode([wallet.account]);
+        // TODO: Add call to boydInterface.functions.setupGnosisSafe.encode(.....)
+        let gnosisSetupData = boydInterface.functions.gnosisSafeSetup.encode([]);
+        let transferOwnershipData = boydInterface.functions.transferOwnership.encode([wallet.account]);
 
         const txs = [
             {
@@ -81,7 +84,13 @@ function NewEstateForm(props) {
                 operation: CPK.CALL,
                 to: expectedEstateAddress,
                 value: 0,
-                data: transferOnershipData
+                data: gnosisSetupData
+            },
+            {
+                operation: CPK.CALL,
+                to: expectedEstateAddress,
+                value: 0,
+                data: transferOwnershipData
             }
         ];
 
@@ -254,8 +263,6 @@ function DappNewEstate(props) {
                 const signer = provider.getSigner(0);
 
                 // Bring Out Your Dead (Alfred Estate) Factory
-                // TODO: Move factory address to a global config
-                const boydFactoryAddress = "0x5Ca258619d7Ea8A81c2f78C25B8AD85151F33CBD";  // Kovan v0.2
                 let boydFactory = new ethers.Contract(boydFactoryAddress, bringOutYourDeadFactoryAbi, signer);
 
                 // Gnosis Contract Proxy Kit
