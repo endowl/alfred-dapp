@@ -103,8 +103,8 @@ function DappEstate(props) {
     const [editBeneficiaryAddress, setEditBeneficiaryAddress] = useState('');
     const [editBeneficiaryShares, setEditBeneficiaryShares] = useState('');
     const [isGnosisSafeRecoveryEnabled, setIsGnosisSafeRecoveryEnabled] = useState(false);
-    const [isGnosisSafeRecoveryExecutor, setIsGnosisSafeRecoveryExecutor] = useState(0);
-    const [gnosisSafeRecoveryMinimumBeneficiaries, setGnosisSafeRecoveryMinimumBeneficiaries] = useState(0);
+    const [isGnosisSafeRecoveryExecutor, setIsGnosisSafeRecoveryExecutor] = useState(false);
+    const [gnosisSafeRecoveryMinimumBeneficiaries, setGnosisSafeRecoveryMinimumBeneficiaries] = useState(ethers.utils.bigNumberify(0));
     const [gnosisRecoveryFormEnabled, setGnosisRecoveryFormEnabled] = useState(false);
     const [gnosisRecoveryFormExecutor, setGnosisRecoveryFormExecutor] = useState(false);
     const [gnosisRecoveryFormMinBeneficiaries, setGnosisRecoveryFormMinBeneficiaries] = useState('');
@@ -311,6 +311,14 @@ function DappEstate(props) {
         }
     }
 
+
+    async function handleRecoverGnosisSafe(event) {
+        event.preventDefault();
+        // TODO: bytes data = abi.encodeWithSignature("swapOwner(address,address,address)", prevOwner, oldOwner, newOwner);
+        // TODO: bytes32 dataHash = getDataHash(data);
+        // TODO: Call estateContract.confirmTransaction(dataHash)
+        // TODO: Possibly call estateContract.recoverAccess(address prevOwner, address oldOwner, address newOwner)
+    }
 
     async function refreshBeneficiaries() {
         const provider = new ethers.providers.Web3Provider(wallet.ethereum);
@@ -742,6 +750,35 @@ function DappEstate(props) {
                             </div>
                         </div>
                     )}
+
+                    {/* TODO: Only display this to Executors and Beneficiaries while Owner is still alive and when Recovery Module is enabled */}
+                    <SimpleCard title="Recover Access to Estate and Gnosis Safe" className="mb-4">
+                        <div>
+                            If the owner of this estate has lost access to their Ethereum wallet, you can assist them with recovering control of their Gnosis Safe and their Estate.
+                        </div>
+                        <div>
+                            Recovery will require this step to be completed by:
+                        </div>
+                        <ul>
+                            {isGnosisSafeRecoveryExecutor && (
+                                <li>The Executor</li>
+                            )}
+                            {(gnosisSafeRecoveryMinimumBeneficiaries.gt(0)) && (
+                                <li>{gnosisSafeRecoveryMinimumBeneficiaries.toString()} Beneficiaries</li>
+                            )}
+                        </ul>
+                        <Form onSubmit={handleRecoverGnosisSafe}>
+                            <div className="form-group mb-3">
+                                <label htmlFor="recoveryNewAddress">Address of estate owner's new wallet:</label>
+                                <input
+                                    className="form-control"
+                                    id="recoveryNewAddress"
+                                    placeholder="Owners new Ethereum address"
+                                />
+                            </div>
+                            <Button type="submit" variant="danger">Submit</Button>
+                        </Form>
+                    </SimpleCard>
 
                     {/* TODO: Only display this to Executors after Death has been established */}
                     <SimpleCard title="Distribute Inheritance to Beneficiaries" className="mb-4">
