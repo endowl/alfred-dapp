@@ -8,6 +8,7 @@ import {ethers} from 'ethers';
 import bringOutYourDeadAbi from "../../../abi/bringOutYourDeadAbi";
 import erc20Abi from "../../../abi/erc20";
 import gnosisModuleManagerAbi from "../../../abi/gnosisModuleManagerAbi";
+import gnosisOwnerManagerAbi from "../../../abi/gnosisOwnerManagerAbi";
 import EthereumAddress from './EthereumAddress';
 import localStorageService from "../../services/localStorageService";
 import PieChart from "./PieChart";
@@ -15,8 +16,11 @@ import {CopyToClipboard} from 'react-copy-to-clipboard';
 import bringOutYourDeadFactoryAbi from "../../../abi/bringOutYourDeadFactoryAbi";
 import {NotificationManager} from "react-notifications";
 
-
+// Gnosis Proxy Kit
 const CPK = require('contract-proxy-kit');
+
+// Sentinal address is used on ends of Gnosis Safe linked lists
+const SENTINAL_ADDRESS = "0x0000000000000000000000000000000000000001";
 
 function BeneficiaryPieChart({beneficiaries, name = "Beneficiary Shares"}) {
     console.log(beneficiaries);
@@ -108,6 +112,7 @@ function DappEstate(props) {
     const [gnosisRecoveryFormEnabled, setGnosisRecoveryFormEnabled] = useState(false);
     const [gnosisRecoveryFormExecutor, setGnosisRecoveryFormExecutor] = useState(false);
     const [gnosisRecoveryFormMinBeneficiaries, setGnosisRecoveryFormMinBeneficiaries] = useState('');
+    const [gnosisRecoveryFormNewOwner, setGnosisRecoveryFormNewOwner] = useState('');
 
     async function handleUpdateGnosisSafeRecovery(event) {
         event.preventDefault();
@@ -133,7 +138,7 @@ function DappEstate(props) {
             // Disable estate from serving as a recovery module for gnosis safe
             // NOTE: Currently making the unsafe assumption that no other recovery modules are present on the gnosis safe
             // TODO: Use moduleManagerInterface.functions.getModules() or .getModulesPaginated(address,uint256) to determine the correct linked list target
-            let disableModuleData = moduleManagerInterface.functions.disableModule.encode(["0x0000000000000000000000000000000000000001", estateAddress]);
+            let disableModuleData = moduleManagerInterface.functions.disableModule.encode([SENTINAL_ADDRESS, estateAddress]);
             txs.push({
                 operation: CPK.CALL,
                 to: gnosisSafe,
@@ -314,11 +319,140 @@ function DappEstate(props) {
 
     async function handleRecoverGnosisSafe(event) {
         event.preventDefault();
-        // TODO: bytes data = abi.encodeWithSignature("swapOwner(address,address,address)", prevOwner, oldOwner, newOwner);
-        // TODO: bytes32 dataHash = getDataHash(data);
-        // TODO: Call estateContract.confirmTransaction(dataHash)
-        // TODO: Possibly call estateContract.recoverAccess(address prevOwner, address oldOwner, address newOwner)
+        const provider = new ethers.providers.Web3Provider(wallet.ethereum);
+        const signer = provider.getSigner(0);
+        const estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
+
+        // Get calldata for OwnerManager.swapOwner(address prevOwner, address oldOwner, address newOwner)
+        // Naively assuming there is currently only own owner of the Gnosis Safe
+        // TODO: Support Gnosis Safe with multiple owners
+        const ownerModuleInterface = new ethers.utils.Interface(gnosisOwnerManagerAbi);
+        const prevOwner = SENTINAL_ADDRESS;
+        const oldOwner = owner;
+        // const newOwner = owner;  // TODO: pull newOwner from recovery form state
+        const newOwner = gnosisRecoveryFormNewOwner;
+        const swapOwnerData = ownerModuleInterface.functions.swapOwner.encode([prevOwner, oldOwner, newOwner]);
+        console.log("swapOwnerData: ", swapOwnerData);
+        const dataHash = await estateContract.getDataHash(swapOwnerData);
+        console.log("dataHash: ", dataHash);
+
+        // Check if the recovery conditions have been met already
+        let isConfirmedByAll = await estateContract.isConfirmedByRequiredParties(dataHash);
+        console.log("isConfirmedByAll: ", isConfirmedByAll);
+
+        if(!isConfirmedByAll) {
+            // Call estateContract.confirmTransaction(dataHash) with the hash of the swapOwner calldata
+            try {
+                let tx = await estateContract.confirmTransaction(dataHash);
+                await tx.wait(1);
+                NotificationManager.success(
+                    "Recovery confirmation successfully submitted.",
+                    "Confirmation Received"
+                );
+
+            } catch (e) {
+                console.log("ERROR while waiting for transaction to complete", e);
+                NotificationManager.error(
+                    "There was a problem confirming recovery operation.",
+                    "Error sending transaction"
+                );
+                return;
+            }
+
+            // Check if the recovery conditions have been met now
+            isConfirmedByAll = await estateContract.isConfirmedByRequiredParties(dataHash);
+            console.log("isConfirmedByAll: ", isConfirmedByAll);
+        }
+
+        // Call estateContract.recoverAccess(address prevOwner, address oldOwner, address newOwner) to finalize the account recovery
+        if(isConfirmedByAll) {
+            // Listen for ownerModuleInterface.AddedOwner(newOwner) event from Gnosis Safe, alert user on success
+            const safe = new ethers.Contract(gnosisSafe, gnosisOwnerManagerAbi, signer);
+            safe.on("AddedOwner", async (event) => {
+                console.log("Gnosis Safe owner added");
+                NotificationManager.success(
+                    "Estate and Gnosis Safe have been successfully recovered to new wallet",
+                    "Recovery Successful"
+                );
+                // TODO: Refresh owner parameter???? (premature, gnosis safe chagned ownership, but not estate)
+            });
+
+            try {
+                await estateContract.recoverAccess(prevOwner, oldOwner, newOwner);
+            } catch (e) {
+                console.log("ERROR while waiting for transaction to complete", e);
+                NotificationManager.error(
+                    "There was a problem finalizing the recovery operation.",
+                    "Error sending transaction"
+                );
+            }
+        }
     }
+
+
+    async function handleRecoverEstate(event) {
+        event.preventDefault();
+        const provider = new ethers.providers.Web3Provider(wallet.ethereum);
+        const signer = provider.getSigner(0);
+        const estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
+
+        // NOTE: This might only the first time the Estate is recovered. Subsequent recoveries will use a different
+        //       old owner address and incorrectly calculate the Gnosis Safe address.  The Gnosis Safe address is
+        //       saved on the Estate contract, but unclear how to force CPK to use it without knowing original owner
+        // NOTE: One solution would simply be to interact directly with Gnosis Safe and not use the CPK for this TX
+        // TODO: Assess risk this technique will only work for first recovery
+        // Initialize Gnosis Contract Proxy Kit using old owner address, to correctly generate Gnosis Safe address
+        const cpk = await CPK.create({ethers, signer: signer, ownerAccount: owner});
+        // console.log("cpk", cpk);
+        // Set current wallet address in Gnosis Contract Proxy Kit so it can interact with the Gnosis Safe correctly
+        cpk.setOwnerAccount(wallet.account);
+        // console.log("cpk", cpk);
+
+        // Prepare calldata for multi-transaction call to Gnosis Safe through Contract Proxy Kit
+        const boydInterface = new ethers.utils.Interface(bringOutYourDeadAbi);
+        // Transfer ownership to self
+        const transferOwnershipData = boydInterface.functions.transferOwnership.encode([wallet.account]);
+        // Check-in as alive
+        const checkinData = boydInterface.functions.imNotDeadYet.encode([]);
+
+        let txs = [
+            {
+                operation: CPK.CALL,
+                to: estateAddress,
+                value: 0,
+                data: transferOwnershipData
+            },
+            {
+                operation: CPK.CALL,
+                to: estateAddress,
+                value: 0,
+                data: checkinData
+            },
+        ];
+
+        // Send multi-TX through Gnosis Safe
+        try {
+            let cpkHash = await cpk.execTransactions(txs, {gasLimit: 5000000});
+            console.log("cpkHash: ", cpkHash);
+            NotificationManager.success(
+                "Estate and Gnosis Safe have been successfully recovered to new wallet",
+                "Recovery Successful"
+            );
+
+            // Refresh owner from estateContract
+            let _owner = await estateContract.owner();
+            setOwner(_owner);
+            setIsOwner(_owner === wallet.account);
+        } catch (e) {
+            console.log("Error sending multi-tx through Gnosis Safe: ", e);
+                NotificationManager.error(
+                    "There was a problem finalizing the recovery operation.",
+                    "Error sending transaction"
+                );
+        }
+
+    }
+
 
     async function refreshBeneficiaries() {
         const provider = new ethers.providers.Web3Provider(wallet.ethereum);
@@ -757,7 +891,7 @@ function DappEstate(props) {
                             If the owner of this estate has lost access to their Ethereum wallet, you can assist them with recovering control of their Gnosis Safe and their Estate.
                         </div>
                         <div>
-                            Recovery will require this step to be completed by:
+                            Finalizing the recovery will require this step to be completed by:
                         </div>
                         <ul>
                             {isGnosisSafeRecoveryExecutor && (
@@ -774,9 +908,24 @@ function DappEstate(props) {
                                     className="form-control"
                                     id="recoveryNewAddress"
                                     placeholder="Owners new Ethereum address"
+                                    value={gnosisRecoveryFormNewOwner}
+                                    onChange={(event) => setGnosisRecoveryFormNewOwner(event.target.value)}
                                 />
                             </div>
-                            <Button type="submit" variant="danger">Submit</Button>
+                            <Button type="submit" variant="danger">Confirm</Button>
+                        </Form>
+                    </SimpleCard>
+
+                    {/* TODO: Only display this to GnosisSafe owner when they differ from estate Owner and the owner is still alive */}
+                    <SimpleCard title="Estate Recovery In Progress" className="mb-4">
+                        <div>
+                            Your Estate recovery is almost complete.  You have successfully regained control of your Gnosis Safe.
+                        </div>
+                        <div className="mb-4">
+                            Click below to finish transferring ownership of your Estate to your new wallet:
+                        </div>
+                        <Form onSubmit={handleRecoverEstate}>
+                            <Button type="submit" variant="danger">Finish Recovery</Button>
                         </Form>
                     </SimpleCard>
 
