@@ -18,7 +18,8 @@ class Stake extends Component {
           rightSubtitle: "Streaming"
         }
       ],
-      stake: null,
+      stake: 0,
+      rate: 0,
       modal: false,
     };
 
@@ -37,7 +38,13 @@ class Stake extends Component {
   }
 
   getStreaming = () => {
+    console.log("streaming():", streaming())
     streaming()
+    .then(res => console.log("getStreaming response:",res))
+    .then(res => this.setState({rate: res})
+    ).catch(
+      err => console.log("err:",err)
+    )
   }
 
   redeem = () => {
@@ -46,13 +53,15 @@ class Stake extends Component {
 
   componentDidMount(){
     this.getStake()
-    console.log("state:",this.state)
+    
     this.getStreaming()
+
+    console.log("state:",this.state)
   }
 
   render() {
     let { stakeDai = [] } = this.state;
-    // this.getStake();
+    // this.getStreaming();
 
     return (
       <Fragment>
@@ -81,7 +90,7 @@ class Stake extends Component {
                       {card.rightSubtitle}
                     </p>
                     <p className="lead text-primary text-capitalize">
-                      {card.rightTitle}
+                      {this.state.rate && this.state.rate}
                     </p>
                   </div>
                 </button>
