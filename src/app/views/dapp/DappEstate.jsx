@@ -13,6 +13,8 @@ import localStorageService from "../../services/localStorageService";
 import PieChart from "./PieChart";
 import {CopyToClipboard} from 'react-copy-to-clipboard';
 import bringOutYourDeadFactoryAbi from "../../../abi/bringOutYourDeadFactoryAbi";
+import {NotificationManager} from "react-notifications";
+
 
 const CPK = require('contract-proxy-kit');
 
@@ -89,8 +91,11 @@ function DappEstate(props) {
     const [liveliness, setLiveliness] = useState(0);
     // const [beneficiaries, setBeneficiaries] = useState([]);
     const [beneficiaries, setBeneficiaries] = useState(null);
+    const [beneficiarySelfShares, setBeneficiarySelfShares] = useState(0);
+    const [beneficiaryTotalShares, setBeneficiaryTotalShares] = useState(0);
     const [trackedTokens, setTrackedTokens] = useState([]);
     const [assets, setAssets] = useState([]);
+    const [inheritance, setInheritance] = useState(null);
     const [isOwner, setIsOwner] = useState(false);
     const [showTodo, setShowTodo] = useState(false);
     const [showEditBeneficiary, setShowEditBeneficiary] = useState(false);
@@ -154,7 +159,31 @@ function DappEstate(props) {
             data: beneficiarySettingsData
         });
 
-        // TODO: Listen for events and update accordingly
+        // Listen for events and update accordingly
+        const safe = new ethers.Contract(gnosisSafe, gnosisModuleManagerAbi, signer);
+        safe.on("EnabledModule", async (event) => {
+            console.log("Module enabled");
+            NotificationManager.success(
+                "The Estate Recovery Module has been enabled on your Gnosis Safe",
+                "Module Enabled"
+            );
+        });
+
+        let estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
+        estateContract.on("BeneficiariesRequiredForSafeRecoveryChanged", async (newValue, event) => {
+            console.log("Beneficiaries required updated: ", newValue);
+            NotificationManager.success(
+                "The number of beneficiaries required to recovery your Gnosis Safe has been updated.",
+                "Settings Updated"
+            );
+        });
+        estateContract.on("IsExecutorRequiredForSafeRecoveryChanged", async (newValue, event) => {
+            console.log("Is executor required updated: ", newValue);
+            NotificationManager.success(
+                "The executor requirement for recovering your Gnosis Safe has been updated.",
+                "Settings Updated"
+            );
+        });
 
         // Send multi-TX through Gnosis Safe, causing Safe to be deployed if it hasn't yet
         try {
@@ -166,7 +195,91 @@ function DappEstate(props) {
         } catch (e) {
             console.log(e);
             // setStatus(statuses.ERROR);
+            NotificationManager.error(
+                "There was a problem transacting through Gnosis Safe.",
+                "Error sending transaction"
+            );
         }
+    }
+
+
+    async function handleDistributeAsset(event, address, asEther) {
+        event.preventDefault();
+
+        let provider = new ethers.providers.Web3Provider(wallet.ethereum);
+        const signer = provider.getSigner(0);
+        let estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
+        try {
+            console.log(event);
+            if(address === ethers.constants.AddressZero) {
+                await estateContract.distributeEthShares();
+            } else {
+                if(asEther) {
+                    await estateContract.distributeTokenSharesAsEth(address);
+                } else {
+                    await estateContract.distributeTokenShares(address);
+                }
+            }
+            estateContract.on("BeneficiaryWithdrawal", async (beneficiary, token, share, event) => {
+                console.log("Distribution to a beneficiary detected");
+                // TODO: More verbose message?
+                NotificationManager.success(
+                    "Distributed asset to beneficiary",
+                    "Asset distributed"
+                );
+
+                // TODO: Refresh asset balances
+            })
+        } catch (e) {
+            console.log("ERROR while waiting for transaction to complete");
+            console.log(e);
+            NotificationManager.error(
+                "There was a problem distributing asset to beneficiaries.",
+                "Error sending transaction"
+            );
+        }
+
+    }
+
+
+    async function handleClaimAsset(event, address, asEther) {
+        event.preventDefault();
+
+        let provider = new ethers.providers.Web3Provider(wallet.ethereum);
+        const signer = provider.getSigner(0);
+        let estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
+        try {
+            console.log(event);
+            if(address === ethers.constants.AddressZero) {
+                await estateContract.claimEthShares();
+            } else {
+                if(asEther) {
+                    await estateContract.claimTokenSharesAsEth(address);
+                } else {
+                    await estateContract.claimTokenShares(address);
+                }
+            }
+            estateContract.on("BeneficiaryWithdrawal", async (beneficiary, token, share, event) => {
+                console.log("Distribution to a beneficiary detected");
+                // TODO: More verbose message?
+                if(ethers.utils.getAddress(beneficiary) === wallet.account) {
+                    NotificationManager.success(
+                        "Successfully claimed share of asset.",
+                        "Asset Claimed"
+                    );
+                }
+
+                // TODO: Refresh asset balances
+            })
+        } catch (e) {
+            console.log("ERROR while waiting for transaction to complete");
+            console.log(e);
+            NotificationManager.error(
+                "There was a problem claiming share of inheritance.",
+                "Error sending transaction"
+            );
+        }
+
     }
 
 
@@ -183,8 +296,11 @@ function DappEstate(props) {
             setEditBeneficiaryAddress('');
             // Listen for beneficiary added event and then refresh
             estateContract.on("AddedBeneficiary", async (event) => {
-                // TODO: Alert user that beneficiary was successfully added
                 console.log('Beneficiary added');
+                NotificationManager.success(
+                    "Beneficiary added to estate.",
+                    "Success"
+                );
                 refreshBeneficiaries();
             });
 
@@ -197,55 +313,47 @@ function DappEstate(props) {
 
 
     async function refreshBeneficiaries() {
-            const provider = new ethers.providers.Web3Provider(wallet.ethereum);
-            const signer = provider.getSigner(0);
-            let estateContract;
+        const provider = new ethers.providers.Web3Provider(wallet.ethereum);
+        const signer = provider.getSigner(0);
+        let estateContract;
+        try {
+            estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
+        } catch (e) {
+            console.log("ERROR while refreshing beneficiaries");
+            console.log(e);
+        }
+        // Load beneficiary details. NOTE: estateContract.getBeneficiaryDetails() is misbehaving currently(?), so doing this
+        let bs = [];
+        let b = null;
+        let bAddress;
+        let bShares;
+        // let _totalBeneficiaryShares = 0;
+        do {
             try {
-                estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
+                console.log("Try b: " + bs.length);
+                bAddress = await estateContract.beneficiaries(bs.length);
+                bShares = await estateContract.beneficiaryShares(bAddress);
+                b = {address: bAddress, shares: bShares.toString()};
+                bs.push(b);
+                // _totalBeneficiaryShares += bShares.toNumber();
             } catch (e) {
-                console.log("ERROR while refreshing beneficiaries");
-                console.log(e);
+                b = null;
             }
-            // Load beneficiary details. NOTE: estateContract.getBeneficiaryDetails() is broken currently, so doing this
-            let bs = [];
-            let b = null;
-            let bAddress;
-            let bShares;
-            do {
-                try {
-                    console.log("Try b: " + bs.length);
-                    bAddress = await estateContract.beneficiaries(bs.length);
-                    bShares = await estateContract.beneficiaryShares(bAddress);
-                    b = {address: bAddress, shares: bShares.toString()};
-                    bs.push(b);
-                } catch (e) {
-                    b = null;
-                }
-            } while (b !== null);
-            setBeneficiaries(bs);
-            console.log(bs);
-
+        } while (b !== null);
+        setBeneficiaries(bs);
+        // setBeneficiaryTotalShares(_totalBeneficiaryShares);
+        console.log(bs);
     }
 
-    // async function estateChanged() {
     useEffect(() => {
         async function fetchData() {
 
             const provider = new ethers.providers.Web3Provider(wallet.ethereum);
             const signer = provider.getSigner(0);
+
             provider.getNetwork().then((network) => {
                 setChainId(network.chainId)
             });
-            console.log('provider');
-            // console.log(provider);
-            console.log(provider.getNetwork().then((network) => {
-                console.log(network.chainId)
-            }));
-
-            // NOTE: This creates a Gnosis Contracty Proxy Kit object
-            // NOTE: it is associated with browser wallet address automatically, not the Alfred contract
-            // const cpk = await CPK.create({ethers, signer: signer});
-            // setGnosisSafe(cpk.address);
 
             let estateContract;
             let _gnosisSafe = null;
@@ -275,8 +383,6 @@ function DappEstate(props) {
             }
 
             // Determine if Gnosis Safe Estate Recovery Module is enabled in Gnosis Safe
-
-            // const safe = new ethers.Contract(cpk.address, gnosisModuleManagerAbi, signer);
             if(_gnosisSafe !== null && _gnosisSafe !== ethers.constants.AddressZero) {
                 const safe = new ethers.Contract(_gnosisSafe, gnosisModuleManagerAbi, signer);
                 const modules = await safe.getModules();
@@ -306,7 +412,24 @@ function DappEstate(props) {
 
             // TODO: Load Dead Man's Switch settings from estate
 
+            // Load beneficiary details
             refreshBeneficiaries();
+
+            let _beneficiarySelfShares;
+            _beneficiarySelfShares = await estateContract.beneficiaryShares(wallet.account);
+            setBeneficiarySelfShares(_beneficiarySelfShares.toNumber());
+            console.log("BeneficiarySelfShares: ", _beneficiarySelfShares);
+
+            let _beneficiaryTotalShares;
+            _beneficiaryTotalShares = await estateContract.totalShares();
+            setBeneficiaryTotalShares(_beneficiaryTotalShares.toNumber());
+            console.log("BeneficiaryTotalShares: ", _beneficiaryTotalShares);
+
+            let shareRatio = 0;
+            if(_beneficiaryTotalShares !== 0) {
+                shareRatio = _beneficiarySelfShares / _beneficiaryTotalShares;
+            }
+            console.log("ShareRatio: ", shareRatio);
 
             // Determine tracked assets
             let _trackedTokens = [];
@@ -333,29 +456,34 @@ function DappEstate(props) {
                 }
 
             }
-            // const token_dai = "0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa";  // KOVAN Dai
-            // const token_dai = "0x6B175474E89094C44Da98b954EedeAC495271d0F";  // Mainnet Dai
-            // if(!_trackedTokens.includes(token_dai)) {
-            //     _trackedTokens.push(token_dai);
-            // }
-
             setTrackedTokens(_trackedTokens);
 
             // Load assets
             let _assets = [];
+            let _inheritance = [];
 
             // Get ETH balance
             try {
                 let wei = await provider.getBalance(estateAddress);
-                _assets = [
-                    {
-                        symbol: 'ETH',
-                        name: 'Ether',
-                        address: ethers.constants.AddressZero,
-                        decimals: 18,
-                        balance: ethers.utils.formatEther(wei),
-                    }
-                ];
+                let asset = {
+                    symbol: 'ETH',
+                    name: 'Ether',
+                    address: ethers.constants.AddressZero,
+                    decimals: 18,
+                    balance: ethers.utils.formatEther(wei),
+                };
+                _assets.push(asset);
+                // Track personal shares if a beneficiary
+                if (_beneficiarySelfShares.toNumber() > 0) {
+                    let inheritAsset = {
+                        symbol: asset['symbol'],
+                        name: asset['name'],
+                        address: asset['address'],
+                        decimals: asset['decimals'],
+                        balance: (asset['balance'] * shareRatio).toFixed(4),
+                    };
+                    _inheritance.push(inheritAsset);
+                }
             } catch (e) {
                 console.log("Failed retrieving asset balances");
             }
@@ -376,18 +504,32 @@ function DappEstate(props) {
                         balance: ethers.utils.formatUnits(wei, decimals),
                     };
                     _assets.push(asset);
+                    console.log("Asset: ", asset);
+                    console.log("Wei: ", wei);
+                    // Track personal shares if a beneficiary
+                    if (_beneficiarySelfShares.toNumber() > 0) {
+                        let inheritAsset = {
+                            symbol: asset['symbol'],
+                            name: asset['name'],
+                            address: asset['address'],
+                            decimals: asset['decimals'],
+                            balance: (asset['balance'] * shareRatio).toFixed(4),
+                        };
+                        console.log("InheritAsset: ", inheritAsset);
+                        _inheritance.push(inheritAsset);
+                    }
                 } catch (e) {
                     console.log("Failed loading asset #" + i);
                 }
             }
-
             setAssets(_assets);
+            setInheritance(_inheritance);
         }
 
         if (wallet.connected) {
             fetchData();
         }
-        // }
+
     }, [wallet.connected, wallet.account, estateAddress]);
 
     return (
@@ -596,6 +738,7 @@ function DappEstate(props) {
                         </div>
                     )}
 
+                    {/* TODO: Only display this to Executors after Death has been established */}
                     <SimpleCard title="Distribute Inheritance to Beneficiaries" className="mb-4">
                         {assets.length === 0 ? (
                             <div className="loader-bubble loader-bubble-primary m-5" />
@@ -617,33 +760,106 @@ function DappEstate(props) {
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div>
-                                                <Button
-                                                    key="primary"
-                                                    variant="primary"
-                                                    size="lg"
-                                                    className="m-1 mb-4 text-capitalize d-block w-100 my-2"
-                                                    onClick={() => setShowTodo(true)}
-                                                >
-                                                    Distribute {asset.name}
-                                                </Button>
-                                            </div>
-                                            {asset.address !== ethers.constants.AddressZero && (
-                                                <div>
-                                                    <Button
-                                                        key="primary"
-                                                        variant="primary"
-                                                        size="lg"
-                                                        className="m-1 mb-4 text-capitalize d-block w-100 my-2"
-                                                        onClick={() => setShowTodo(true)}
-                                                    >
-                                                        Distribute {asset.symbol} as Ether
-                                                    </Button>
-                                                </div>
+                                            {asset.balance > 0 && (
+                                                <Fragment>
+                                                    <div>
+                                                        <Button
+                                                            key="primary"
+                                                            variant="primary"
+                                                            size="lg"
+                                                            className="m-1 mb-4 text-capitalize d-block w-100 my-2"
+                                                            onClick={(event) => handleDistributeAsset(event, asset.address, false)}
+                                                        >
+                                                            Distribute {asset.name}
+                                                        </Button>
+                                                    </div>
+                                                    {asset.address !== ethers.constants.AddressZero && (
+                                                        <div>
+                                                            <Button
+                                                                key="primary"
+                                                                variant="primary"
+                                                                size="lg"
+                                                                className="m-1 mb-4 text-capitalize d-block w-100 my-2"
+                                                                onClick={(event) => handleDistributeAsset(event, asset.address, true)}
+                                                            >
+                                                                Distribute {asset.symbol} as Ether
+                                                            </Button>
+                                                        </div>
+                                                    )}
+                                                </Fragment>
                                             )}
                                         </div>
                                     ))}
                                 </div>
+                            </Fragment>
+                        )}
+                    </SimpleCard>
+
+                    {/* TODO: Only display this to Beneficiaries after Death has been established */}
+                    <SimpleCard title="Claim Share of Inheritance" className="mb-4">
+                        {inheritance === null ? (
+                            <div className="loader-bubble loader-bubble-primary m-5" />
+                        ) : (
+                            <Fragment>
+                                <p>
+                                    My Shares: {beneficiarySelfShares} {beneficiaryTotalShares > 0 ? '(' + (beneficiarySelfShares / beneficiaryTotalShares * 100).toFixed(2) + '%)' : ''}
+                                </p>
+                                <p>
+                                    Total Shares: {beneficiaryTotalShares}
+                                </p>
+                                {inheritance.length === 0 ? (
+                                    <span />
+                                ) : (
+                                    <Fragment>
+                                        <div className="row">
+                                            {inheritance.map((asset, index) => (
+                                                <div className="col-lg-3 col-md-6 col-sm-6" key={asset.address}>
+                                                    <div className="card card-icon-bg card-icon-bg-primary o-hidden mb-4">
+                                                        <div className="card-body text-center">
+                                                            <span className={"i- icon icon-" + asset.symbol.toLowerCase()} />
+                                                            <div className="content">
+                                                                <p className="text-muted mt-2 mb-0 text-capitalize">
+                                                                    {asset.name}
+                                                                </p>
+                                                                <p className="lead text-primary text-24 mb-2 text-capitalize">
+                                                                    {asset.balance}&nbsp;{asset.symbol}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    {asset.balance > 0 && (
+                                                        <Fragment>
+                                                            <div>
+                                                                <Button
+                                                                    key="primary"
+                                                                    variant="primary"
+                                                                    size="lg"
+                                                                    className="m-1 mb-4 text-capitalize d-block w-100 my-2"
+                                                                    onClick={(event) => handleClaimAsset(event, asset.address, false)}
+                                                                >
+                                                                    Claim {asset.name}
+                                                                </Button>
+                                                            </div>
+                                                            {asset.address !== ethers.constants.AddressZero && (
+                                                                <div>
+                                                                    <Button
+                                                                        key="primary"
+                                                                        variant="primary"
+                                                                        size="lg"
+                                                                        className="m-1 mb-4 text-capitalize d-block w-100 my-2"
+                                                                        onClick={(event) => handleClaimAsset(event, asset.address, true)}
+                                                                    >
+                                                                        Claim {asset.symbol} as Ether
+                                                                    </Button>
+                                                                </div>
+                                                            )}
+                                                        </Fragment>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </Fragment>
+                                )}
                             </Fragment>
                         )}
                     </SimpleCard>

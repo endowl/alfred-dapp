@@ -10,7 +10,7 @@ import history from "@history";
 import routes from "./RootRoutes";
 import { Store } from "./redux/Store";
 import { renderRoutes } from "react-router-config";
-import Auth from "./auth/Auth";
+// import Auth from "./auth/Auth";
 import RootRoutes from "./RootRoutes";
 import { Loading } from "@gull";
 
