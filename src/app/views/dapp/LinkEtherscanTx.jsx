@@ -1,5 +1,5 @@
 import React, {Fragment} from "react";
-import LinkEtherscanAddress from "./LinkEtherscanAddress";
+import EthereumAddress from "./EthereumAddress";
 
 function LinkEtherscanTx(props) {
     let txHashUrl = "https://etherscan.io/tx/" + props.txHash;

@@ -8,7 +8,7 @@ import {ethers} from 'ethers';
 import bringOutYourDeadAbi from "../../../abi/bringOutYourDeadAbi";
 import erc20Abi from "../../../abi/erc20";
 import gnosisModuleManagerAbi from "../../../abi/gnosisModuleManagerAbi";
-import LinkEtherscanAddress from './LinkEtherscanAddress';
+import EthereumAddress from './EthereumAddress';
 import localStorageService from "../../services/localStorageService";
 import PieChart from "./PieChart";
 import {CopyToClipboard} from 'react-copy-to-clipboard';
@@ -243,17 +243,21 @@ function DappEstate(props) {
 
             // NOTE: This creates a Gnosis Contracty Proxy Kit object
             // NOTE: it is associated with browser wallet address automatically, not the Alfred contract
-            const cpk = await CPK.create({ethers, signer: signer});
-            setGnosisSafe(cpk.address);
+            // const cpk = await CPK.create({ethers, signer: signer});
+            // setGnosisSafe(cpk.address);
 
             let estateContract;
+            let _gnosisSafe = null;
             try {
                 estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
                 console.log(estateContract);
-                setOwner(await estateContract.owner());
-                setIsOwner(owner === wallet.account);
+                let _owner = await estateContract.owner();
+                setOwner(_owner);
+                setIsOwner(_owner === wallet.account);
                 setExecutor(await estateContract.executor());
                 setLiveliness(await estateContract.liveliness());
+                _gnosisSafe = await estateContract.gnosisSafe();
+                setGnosisSafe(_gnosisSafe);
 
                 let executorRequired = await estateContract.isExecutorRequiredForSafeRecovery();
                 setIsGnosisSafeRecoveryExecutor(executorRequired);
@@ -270,28 +274,32 @@ function DappEstate(props) {
             }
 
             // Determine if Gnosis Safe Estate Recovery Module is enabled in Gnosis Safe
-            const safe = new ethers.Contract(cpk.address, gnosisModuleManagerAbi, signer);
-            const modules = await safe.getModules();
-            console.log("Modules", modules);
-            let enabled = false;
-            if(modules.length > 0) {
-                if(modules.length === 10) {
-                    // TODO: Handle situation where there may be more than 10 modules (getModules() only returns first 10)
-                    //       Will have to use ModuleManager.getModulesPaginated(...)
-                    console.log("Modules list has 10 entries, possibility of this contract being past end of list")
-                }
-                for (let i = 0; i < modules.length; i++) {
-                    if(ethers.utils.getAddress(modules[i]) === ethers.utils.getAddress(estateAddress)) {
-                        enabled = true;
-                        break;
+
+            // const safe = new ethers.Contract(cpk.address, gnosisModuleManagerAbi, signer);
+            if(_gnosisSafe !== null && _gnosisSafe !== ethers.constants.AddressZero) {
+                const safe = new ethers.Contract(_gnosisSafe, gnosisModuleManagerAbi, signer);
+                const modules = await safe.getModules();
+                console.log("Modules", modules);
+                let enabled = false;
+                if(modules.length > 0) {
+                    if(modules.length === 10) {
+                        // TODO: Handle situation where there may be more than 10 modules (getModules() only returns first 10)
+                        //       Will have to use ModuleManager.getModulesPaginated(...)
+                        console.log("Modules list has 10 entries, possibility of this contract being past end of list")
                     }
-                }
-                if (enabled) {
-                    setIsGnosisSafeRecoveryEnabled(true);
-                    setGnosisRecoveryFormEnabled(true);
-                } else {
-                    setIsGnosisSafeRecoveryEnabled(false);
-                    setGnosisRecoveryFormEnabled(false);
+                    for (let i = 0; i < modules.length; i++) {
+                        if(ethers.utils.getAddress(modules[i]) === ethers.utils.getAddress(estateAddress)) {
+                            enabled = true;
+                            break;
+                        }
+                    }
+                    if (enabled) {
+                        setIsGnosisSafeRecoveryEnabled(true);
+                        setGnosisRecoveryFormEnabled(true);
+                    } else {
+                        setIsGnosisSafeRecoveryEnabled(false);
+                        setGnosisRecoveryFormEnabled(false);
+                    }
                 }
             }
 
@@ -425,15 +433,15 @@ function DappEstate(props) {
                 <Fragment>
                     <SimpleCard title="Estate Details" className="mb-4">
                         <div>
-                            Estate: <LinkEtherscanAddress address={estateAddress} chainId={chainId}>{estateAddress}</LinkEtherscanAddress>
+                            Estate: <EthereumAddress address={estateAddress} chainId={chainId}>{estateAddress}</EthereumAddress>
                         </div>
                         <div>
                             Gnosis Safe:
-                            {/*<LinkEtherscanAddress address={gnosisSafe} chainId={chainId}>{gnosisSafe}</LinkEtherscanAddress>*/}
-                            <a href={'https://gnosis-safe.io/app/#/safes/' + gnosisSafe} target="_blank">{gnosisSafe}</a>
+                            <EthereumAddress address={gnosisSafe} url={'https://gnosis-safe.io/app/#/safes/' + gnosisSafe} chainId={chainId}>{gnosisSafe}</EthereumAddress>
+                            {/*<a href={'https://gnosis-safe.io/app/#/safes/' + gnosisSafe} target="_blank">{gnosisSafe}</a>*/}
                         </div>
                         <div>
-                            Owner: <LinkEtherscanAddress address={owner} chainId={chainId}>{owner}</LinkEtherscanAddress>
+                            Owner: <EthereumAddress address={owner} chainId={chainId}>{owner}</EthereumAddress>
                         </div>
                         <div>
                             Life Signs:
@@ -459,113 +467,113 @@ function DappEstate(props) {
                                 <span> (None) </span>
                             ) : (
                                 <span>
-                                    <LinkEtherscanAddress address={executor} chainId={chainId}>{executor}</LinkEtherscanAddress>
+                                    <EthereumAddress address={executor} chainId={chainId}>{executor}</EthereumAddress>
                                 </span>
                             )}
-                            <span className="cursor-pointer text-success mr-2">
-                                <i className="nav-icon i-Pen-2 font-weight-bold" onClick={() => setShowTodo(true)} />
-                            </span>
-                            <span className="cursor-pointer text-danger mr-2">
-                                <i className="nav-icon i-Close-Window font-weight-bold" onClick={() => setShowTodo(true)} />
-                            </span>
-
                             {isOwner && (
-                                <EditExecutor executor={executor}/>
+                                <Fragment>
+                                    <span className="cursor-pointer text-success mr-2"> <i className="nav-icon i-Pen-2 font-weight-bold" onClick={() => setShowTodo(true)} /></span>
+                                    {executor !== ethers.constants.AddressZero && (
+                                        <span className="cursor-pointer text-danger mr-2">
+                                            <i className="nav-icon i-Close-Window font-weight-bold" onClick={() => setShowTodo(true)} />
+                                        </span>
+                                    )}
+                                </Fragment>
                             )}
                         </div>
                     </SimpleCard>
 
-                    <div className="row">
-                        <div className="col-lg-6">
-                            <SimpleCard title="Dead Man's Switch" className="mb-4">
-                                <Form>
-                                    <Form.Check type="switch" id="deadManEnabled" label="Enabled"/>
-                                    <div className="form-group mb-3">
-                                        <label htmlFor="deadManCheckInDays">Maximum number of days between Check-ins</label>
-                                        <input
-                                            className="form-control"
-                                            id="deadManCheckInDays"
-                                            placeholder="Check-in period in days"
-                                        />
+                    {isOwner && (
+                        <div className="row">
+                            <div className="col-lg-6">
+                                <SimpleCard title="Dead Man's Switch" className="mb-4">
+                                    <Form>
+                                        <Form.Check type="switch" id="deadManEnabled" label="Enabled"/>
+                                        <div className="form-group mb-3">
+                                            <label htmlFor="deadManCheckInDays">Maximum number of days between Check-ins</label>
+                                            <input
+                                                className="form-control"
+                                                id="deadManCheckInDays"
+                                                placeholder="Check-in period in days"
+                                            />
+                                        </div>
+                                    </Form>
+                                    <div className="row">
+                                        <div className="col-lg-6 col-md-12 col-sm-12">
+                                            <Button
+                                                key="primary"
+                                                variant="primary"
+                                                size="lg"
+                                                className="m-1 mb-4 text-capitalize d-block w-100 my-2"
+                                                onClick={() => setShowTodo(true)}
+                                            >
+                                                I'm Alive - Check-in Now!
+                                            </Button>
+                                        </div>
                                     </div>
-                                </Form>
-                                <div className="row">
-                                    <div className="col-lg-6 col-md-12 col-sm-12">
-                                        <Button
-                                            key="primary"
-                                            variant="primary"
-                                            size="lg"
-                                            className="m-1 mb-4 text-capitalize d-block w-100 my-2"
-                                            // className="d-block w-100 my-2 text-capitalize"
-                                            onClick={() => setShowTodo(true)}
-                                        >
-                                            I'm Alive - Check-in Now!
-                                        </Button>
-                                    </div>
-                                </div>
-                                <div className="row">
-                                    <div className="col-lg-6 col-md-12 col-sm-12">
-                                        <div className="card card-icon-bg card-icon-bg-primary o-hidden mb-4">
-                                            <div className="card-body text-center">
-                                                <i className="i-Stopwatch"/>
-                                                <div className="content">
-                                                    <p className="text-muted mt-2 mb-0 text-capitalize">
-                                                        Last Check-In
-                                                    </p>
-                                                    <p className="lead text-primary text-24 mb-2 text-capitalize">
-                                                        ...&nbsp;days
-                                                    </p>
+                                    <div className="row">
+                                        <div className="col-lg-6 col-md-12 col-sm-12">
+                                            <div className="card card-icon-bg card-icon-bg-primary o-hidden mb-4">
+                                                <div className="card-body text-center">
+                                                    <i className="i-Stopwatch"/>
+                                                    <div className="content">
+                                                        <p className="text-muted mt-2 mb-0 text-capitalize">
+                                                            Last Check-In
+                                                        </p>
+                                                        <p className="lead text-primary text-24 mb-2 text-capitalize">
+                                                            ...&nbsp;days
+                                                        </p>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            </SimpleCard>
-                        </div>
-                        <div className="col-lg-6">
+                                </SimpleCard>
+                            </div>
+                            <div className="col-lg-6">
+                                <SimpleCard title="Gnosis Safe Estate Recovery Module" className="mb-4">
+                                    <Form onSubmit={handleUpdateGnosisSafeRecovery}>
+                                        <div className="mb-3">
+                                            <Form.Check
+                                                type="switch"
+                                                id="gnosisSafeRecoveryEnabled"
+                                                label="Enabled"
+                                                checked={gnosisRecoveryFormEnabled}
+                                                onChange={(event) => setGnosisRecoveryFormEnabled(event.target.checked)}
+                                            />
+                                        </div>
+                                        <div className="form-group mb-1">
+                                            <label>Parties required to recover gnosis safe:</label>
+                                            <Form.Check
+                                                type="switch"
+                                                id="gnosisSafeRecoveryExecutor"
+                                                label="Executor"
+                                                checked={gnosisRecoveryFormExecutor}
+                                                onChange={(event) => setGnosisRecoveryFormExecutor(event.target.checked)}
+                                            />
+                                        </div>
 
-                            <SimpleCard title="Gnosis Safe Estate Recovery Module" className="mb-4">
-                                <Form onSubmit={handleUpdateGnosisSafeRecovery}>
-                                    <div className="mb-3">
-                                        <Form.Check
-                                            type="switch"
-                                            id="gnosisSafeRecoveryEnabled"
-                                            label="Enabled"
-                                            checked={gnosisRecoveryFormEnabled}
-                                            onChange={(event) => setGnosisRecoveryFormEnabled(event.target.checked)}
-                                        />
-                                    </div>
-                                    <div className="form-group mb-1">
-                                        <label>Parties required to recover gnosis safe:</label>
-                                        <Form.Check
-                                            type="switch"
-                                            id="gnosisSafeRecoveryExecutor"
-                                            label="Executor"
-                                            checked={gnosisRecoveryFormExecutor}
-                                            onChange={(event) => setGnosisRecoveryFormExecutor(event.target.checked)}
-                                        />
-                                    </div>
-
-                                    <div className="form-group mb-3">
-                                        <label htmlFor="gnosisSafeRecoveryMinBeneficiaries">Beneficiaries, minimum number:</label>
-                                        <input
-                                            className="form-control"
-                                            id="gnosisSafeRecoveryMinBeneficiaries"
-                                            placeholder=""
-                                            type="number"
-                                            min="1"
-                                            step="1"
-                                            value={gnosisRecoveryFormMinBeneficiaries}
-                                            onChange={(event) => setGnosisRecoveryFormMinBeneficiaries(event.target.value)}
-                                        />
-                                    </div>
-                                    <button type="submit" className="btn btn-primary">
-                                        Update
-                                    </button>
-                                </Form>
-                            </SimpleCard>
+                                        <div className="form-group mb-3">
+                                            <label htmlFor="gnosisSafeRecoveryMinBeneficiaries">Beneficiaries, minimum number:</label>
+                                            <input
+                                                className="form-control"
+                                                id="gnosisSafeRecoveryMinBeneficiaries"
+                                                placeholder=""
+                                                type="number"
+                                                min="1"
+                                                step="1"
+                                                value={gnosisRecoveryFormMinBeneficiaries}
+                                                onChange={(event) => setGnosisRecoveryFormMinBeneficiaries(event.target.value)}
+                                            />
+                                        </div>
+                                        <button type="submit" className="btn btn-primary">
+                                            Update
+                                        </button>
+                                    </Form>
+                                </SimpleCard>
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     <Card className="mb-4">
                         <Card.Body>
@@ -599,10 +607,10 @@ function DappEstate(props) {
                                                             {index + 1}
                                                         </th>
                                                         <td>
-                                                            <LinkEtherscanAddress address={beneficiary.address}
-                                                                                  chainId={chainId}>
+                                                            <EthereumAddress address={beneficiary.address}
+                                                                             chainId={chainId}>
                                                                 {beneficiary.address}
-                                                            </LinkEtherscanAddress>
+                                                            </EthereumAddress>
                                                         </td>
                                                         <td>
                                                             {beneficiary.shares}
@@ -681,9 +689,9 @@ function DappEstate(props) {
                                                 {assets.map((asset, index) => (
                                                     <tr key={asset.address}>
                                                         <th scope="row">
-                                                            <LinkEtherscanAddress address={asset.address} chainId={chainId}>
+                                                            <EthereumAddress address={asset.address} chainId={chainId}>
                                                                 {asset.name}
-                                                            </LinkEtherscanAddress>
+                                                            </EthereumAddress>
                                                         </th>
                                                         <td>
                                                             {asset.balance} {asset.symbol}
