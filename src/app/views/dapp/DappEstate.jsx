@@ -448,6 +448,7 @@ function DappEstate(props) {
                 "0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa",  // KOVAN Dai
                 "0x6B175474E89094C44Da98b954EedeAC495271d0F",  // Mainnet Dai
                 "0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643",  // Mainnet Compound Dai
+                "0x61eB5a373c4Ec78523602583c049d8563d2C7BCD",  // KOKAN Chainlink
             ];
 
             for (let i = 0; i < defaultTokens.length; i++) {
@@ -475,12 +476,14 @@ function DappEstate(props) {
                 _assets.push(asset);
                 // Track personal shares if a beneficiary
                 if (_beneficiarySelfShares.toNumber() > 0) {
+                    let beneficiaryBalance = await estateContract.getBeneficiaryBalance(wallet.account, ethers.constants.AddressZero);
                     let inheritAsset = {
                         symbol: asset['symbol'],
                         name: asset['name'],
                         address: asset['address'],
                         decimals: asset['decimals'],
-                        balance: (asset['balance'] * shareRatio).toFixed(4),
+                        // balance: (asset['balance'] * shareRatio).toFixed(4),
+                        balance: ethers.utils.formatEther(beneficiaryBalance),
                     };
                     _inheritance.push(inheritAsset);
                 }
@@ -508,12 +511,14 @@ function DappEstate(props) {
                     console.log("Wei: ", wei);
                     // Track personal shares if a beneficiary
                     if (_beneficiarySelfShares.toNumber() > 0) {
+                        let beneficiaryBalance = await estateContract.getBeneficiaryBalance(wallet.account, asset['address']);
                         let inheritAsset = {
                             symbol: asset['symbol'],
                             name: asset['name'],
                             address: asset['address'],
                             decimals: asset['decimals'],
-                            balance: (asset['balance'] * shareRatio).toFixed(4),
+                            // balance: (asset['balance'] * shareRatio).toFixed(4),
+                            balance: ethers.utils.formatUnits(beneficiaryBalance, decimals),
                         };
                         console.log("InheritAsset: ", inheritAsset);
                         _inheritance.push(inheritAsset);
@@ -796,17 +801,15 @@ function DappEstate(props) {
                     </SimpleCard>
 
                     {/* TODO: Only display this to Beneficiaries after Death has been established */}
-                    <SimpleCard title="Claim Share of Inheritance" className="mb-4">
+                    <SimpleCard title="Claim My Share of Inheritance" className="mb-4">
                         {inheritance === null ? (
                             <div className="loader-bubble loader-bubble-primary m-5" />
                         ) : (
                             <Fragment>
-                                <p>
-                                    My Shares: {beneficiarySelfShares} {beneficiaryTotalShares > 0 ? '(' + (beneficiarySelfShares / beneficiaryTotalShares * 100).toFixed(2) + '%)' : ''}
-                                </p>
-                                <p>
-                                    Total Shares: {beneficiaryTotalShares}
-                                </p>
+                                <div>
+                                    My Shares:
+                                    <strong>{beneficiaryTotalShares > 0 ? (beneficiarySelfShares / beneficiaryTotalShares * 100).toFixed(2) + '%' : ''}</strong> ({beneficiarySelfShares} out of {beneficiaryTotalShares})
+                                </div>
                                 {inheritance.length === 0 ? (
                                     <span />
                                 ) : (
