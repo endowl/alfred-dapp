@@ -2,6 +2,7 @@ import React, { Component, Fragment } from "react";
 import { getStakedAmount } from "./utils/getStakedAmount";
 import { streaming } from "./utils/streaming";
 import StakingModal from "./StakingModal";
+import { redeem } from "./utils/redeem";
 
 class Stake extends Component {
   constructor(props){
@@ -23,6 +24,7 @@ class Stake extends Component {
 
     this.getStake = this.getStake.bind(this)
     this.getStreaming = this.getStreaming.bind(this)
+    this.redeem = this.redeem.bind(this)
   }
 
   getStake = () => {
@@ -36,6 +38,10 @@ class Stake extends Component {
 
   getStreaming = () => {
     streaming()
+  }
+
+  redeem = () => {
+    redeem()
   }
 
   componentDidMount(){
@@ -68,7 +74,7 @@ class Stake extends Component {
                   </div>
                 </button>
 
-                <button className="card-body text-center" style={{padding: "4px"}}>
+                <button className="card-body text-center" style={{padding: "4px"}} onClick={(e)=>{this.redeem()}}>
                   <i className={card.rightIcon}></i>
                   <div >
                     <p className="text-muted text-capitalize" style={{marginBottom: "0px"}}>

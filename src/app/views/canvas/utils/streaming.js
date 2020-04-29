@@ -17,7 +17,7 @@ export async function streaming (){
         return axios.get(COMPOUND_API_CTOKEN_URL)
         .then(function (response) {
           console.log('Response from the server: ', response)
-          document.getElementById('content').innerText = JSON.stringify(response.data.cToken, null, 2)
+          // document.getElementById('content').innerText = JSON.stringify(response.data.cToken, null, 2)
         })
         .catch(function (response) {
           console.log(response)
