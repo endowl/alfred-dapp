@@ -15,8 +15,8 @@ export async function streaming (){
     // console.log("streaming.stake:", stake);
     
     // let streaming equal {stake * apy}
-    let loadMessage = () => {
-        axios.get(COMPOUND_API_CTOKEN_URL)
+    let loadMessage = async() => {
+        return axios.get(COMPOUND_API_CTOKEN_URL)
         .then(function (response) {
           
           console.log('Response from the server: ', response)
@@ -35,7 +35,7 @@ export async function streaming (){
         })
     }
 
-    // console.log("loadMessage:", await loadMessage())
+    // loadMessage().then(res => console.log("loadMessage:", res))
 
     return await loadMessage();
 

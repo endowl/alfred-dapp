@@ -38,10 +38,12 @@ class Stake extends Component {
   }
 
   getStreaming = () => {
-    console.log("streaming():", streaming())
+    // streaming().then(
+    //   res => console.log("streaming():", res)
+    // )
     streaming()
-    .then(res => console.log("getStreaming response:",res))
-    .then(res => this.setState({rate: res})
+    // .then(res => console.log("getStreaming response:",res))
+    .then(res => this.setState({rate: res.toFixed(2) + "/yr"})
     ).catch(
       err => console.log("err:",err)
     )

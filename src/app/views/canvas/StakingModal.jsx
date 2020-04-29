@@ -1,5 +1,6 @@
 import React, { Component, Fragment } from "react";
 import { stake } from "./utils/stake";
+import { redeem } from "./utils/redeem";
 
 class StakeModal extends Component {
   constructor(props){
@@ -30,6 +31,11 @@ class StakeModal extends Component {
                 </label>
                 <button className="card-body text-center" style={{padding: "4px"}} onClick={(e)=>stake(this.state.dai)}>
                   Stake it!
+                </button>
+
+
+                <button className="card-body text-center" style={{padding: "4px"}} onClick={(e)=>redeem()}>
+                  Un-stake it!
                 </button>
               </div>
             </div>
