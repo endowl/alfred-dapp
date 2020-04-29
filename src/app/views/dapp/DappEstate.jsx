@@ -101,6 +101,7 @@ function DappEstate(props) {
     const [assets, setAssets] = useState([]);
     const [inheritance, setInheritance] = useState(null);
     const [isOwner, setIsOwner] = useState(false);
+    const [isGnosisSafeOwner, setIsGnosisSafeOwner] = useState(false);
     const [showTodo, setShowTodo] = useState(false);
     const [showEditBeneficiary, setShowEditBeneficiary] = useState(false);
     const [chainId, setChainId] = useState(1);
@@ -524,9 +525,12 @@ function DappEstate(props) {
                 return;
             }
 
-            // Determine if Gnosis Safe Estate Recovery Module is enabled in Gnosis Safe
             if(_gnosisSafe !== null && _gnosisSafe !== ethers.constants.AddressZero) {
                 const safe = new ethers.Contract(_gnosisSafe, gnosisModuleManagerAbi, signer);
+                // Check if current user is an owner of the Gnosis Safe
+                const safeOwnerManager = new ethers.Contract(_gnosisSafe, gnosisOwnerManagerAbi, signer);
+                setIsGnosisSafeOwner(await safeOwnerManager.isOwner(wallet.account));
+                // Determine if Gnosis Safe Estate Recovery Module is enabled in Gnosis Safe
                 const modules = await safe.getModules();
                 console.log("Modules", modules);
                 let enabled = false;
@@ -885,173 +889,181 @@ function DappEstate(props) {
                         </div>
                     )}
 
-                    {/* TODO: Only display this to Executors and Beneficiaries while Owner is still alive and when Recovery Module is enabled */}
-                    <SimpleCard title="Recover Access to Estate and Gnosis Safe" className="mb-4">
-                        <div>
-                            If the owner of this estate has lost access to their Ethereum wallet, you can assist them with recovering control of their Gnosis Safe and their Estate.
-                        </div>
-                        <div>
-                            Finalizing the recovery will require this step to be completed by:
-                        </div>
-                        <ul>
-                            {isGnosisSafeRecoveryExecutor && (
-                                <li>The Executor</li>
-                            )}
-                            {(gnosisSafeRecoveryMinimumBeneficiaries.gt(0)) && (
-                                <li>{gnosisSafeRecoveryMinimumBeneficiaries.toString()} Beneficiaries</li>
-                            )}
-                        </ul>
-                        <Form onSubmit={handleRecoverGnosisSafe}>
-                            <div className="form-group mb-3">
-                                <label htmlFor="recoveryNewAddress">Address of estate owner's new wallet:</label>
-                                <input
-                                    className="form-control"
-                                    id="recoveryNewAddress"
-                                    placeholder="Owners new Ethereum address"
-                                    value={gnosisRecoveryFormNewOwner}
-                                    onChange={(event) => setGnosisRecoveryFormNewOwner(event.target.value)}
-                                />
+                    {/* Only display this to Executors and Beneficiaries while Owner is still alive and Recovery Module is enabled */}
+                    {((executor === wallet.account || beneficiarySelfShares > 0) && liveliness === 0 && isGnosisSafeRecoveryEnabled) && (
+                        <SimpleCard title="Recover Access to Estate and Gnosis Safe" className="mb-4">
+                            <div>
+                                If the owner of this estate has lost access to their Ethereum wallet, you can assist them with recovering control of their Gnosis Safe and their Estate.
                             </div>
-                            <Button type="submit" variant="danger">Confirm</Button>
-                        </Form>
-                    </SimpleCard>
+                            <div>
+                                To approve the recovery this step must be completed by:
+                            </div>
+                            <ul>
+                                {isGnosisSafeRecoveryExecutor && (
+                                    <li>The Executor</li>
+                                )}
+                                {(gnosisSafeRecoveryMinimumBeneficiaries.gt(0)) && (
+                                    <li>{gnosisSafeRecoveryMinimumBeneficiaries.toString()} Beneficiaries</li>
+                                )}
+                            </ul>
+                            <Form onSubmit={handleRecoverGnosisSafe}>
+                                <div className="form-group mb-3">
+                                    <label htmlFor="recoveryNewAddress">Address of estate owner's new wallet:</label>
+                                    <input
+                                        className="form-control"
+                                        id="recoveryNewAddress"
+                                        placeholder="Owners new Ethereum address"
+                                        value={gnosisRecoveryFormNewOwner}
+                                        onChange={(event) => setGnosisRecoveryFormNewOwner(event.target.value)}
+                                    />
+                                </div>
+                                <Button type="submit" variant="danger">Confirm</Button>
+                            </Form>
+                        </SimpleCard>
+                    )}
 
-                    {/* TODO: Only display this to GnosisSafe owner when they differ from estate Owner and the owner is still alive */}
-                    <SimpleCard title="Estate Recovery In Progress" className="mb-4">
-                        <div>
-                            Your Estate recovery is almost complete.  You have successfully regained control of your Gnosis Safe.
-                        </div>
-                        <div className="mb-4">
-                            Click below to finish transferring ownership of your Estate to your new wallet:
-                        </div>
-                        <Form onSubmit={handleRecoverEstate}>
-                            <Button type="submit" variant="danger">Finish Recovery</Button>
-                        </Form>
-                    </SimpleCard>
+                    {/* Only display this to GnosisSafe owner when they differ from estate Owner and the owner is still alive */}
+                    { (isGnosisSafeOwner && !isOwner && liveliness === 0) && (
+                        <SimpleCard title="Finish Estate Recovery In Progress" className="mb-4">
+                            <div>
+                                Your Estate recovery is almost complete.  You have successfully regained control of your Gnosis Safe.
+                            </div>
+                            <div className="mb-4">
+                                Click below to finish transferring ownership of your Estate to your new wallet:
+                            </div>
+                            <Form onSubmit={handleRecoverEstate}>
+                                <Button type="submit" variant="danger">Finish Recovery</Button>
+                            </Form>
+                        </SimpleCard>
+                    )}
 
-                    {/* TODO: Only display this to Executors after Death has been established */}
-                    <SimpleCard title="Distribute Inheritance to Beneficiaries" className="mb-4">
-                        {assets.length === 0 ? (
-                            <div className="loader-bubble loader-bubble-primary m-5" />
-                        ) : (
-                            <Fragment>
-                                <div className="row">
-                                    {assets.map((asset, index) => (
-                                        <div className="col-lg-3 col-md-6 col-sm-6" key={asset.address}>
-                                            <div className="card card-icon-bg card-icon-bg-primary o-hidden mb-4">
-                                                <div className="card-body text-center">
-                                                    <span className={"i- icon icon-" + asset.symbol.toLowerCase()} />
-                                                    <div className="content">
-                                                        <p className="text-muted mt-2 mb-0 text-capitalize">
-                                                            {asset.name}
-                                                        </p>
-                                                        <p className="lead text-primary text-24 mb-2 text-capitalize">
-                                                            {asset.balance}&nbsp;{asset.symbol}
-                                                        </p>
+                    {/* Only display this to Executors after Death has been established */}
+                    { (executor === wallet.account && liveliness === 2) && (
+                        <SimpleCard title="Distribute Inheritance to Beneficiaries" className="mb-4">
+                            {assets.length === 0 ? (
+                                <div className="loader-bubble loader-bubble-primary m-5" />
+                            ) : (
+                                <Fragment>
+                                    <div className="row">
+                                        {assets.map((asset, index) => (
+                                            <div className="col-lg-3 col-md-6 col-sm-6" key={asset.address}>
+                                                <div className="card card-icon-bg card-icon-bg-primary o-hidden mb-4">
+                                                    <div className="card-body text-center">
+                                                        <span className={"i- icon icon-" + asset.symbol.toLowerCase()} />
+                                                        <div className="content">
+                                                            <p className="text-muted mt-2 mb-0 text-capitalize">
+                                                                {asset.name}
+                                                            </p>
+                                                            <p className="lead text-primary text-24 mb-2 text-capitalize">
+                                                                {asset.balance}&nbsp;{asset.symbol}
+                                                            </p>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                            {asset.balance > 0 && (
-                                                <Fragment>
-                                                    <div>
-                                                        <Button
-                                                            key="primary"
-                                                            variant="primary"
-                                                            size="lg"
-                                                            className="m-1 mb-4 text-capitalize d-block w-100 my-2"
-                                                            onClick={(event) => handleDistributeAsset(event, asset.address, false)}
-                                                        >
-                                                            Distribute {asset.name}
-                                                        </Button>
-                                                    </div>
-                                                    {asset.address !== ethers.constants.AddressZero && (
+                                                {asset.balance > 0 && (
+                                                    <Fragment>
                                                         <div>
                                                             <Button
                                                                 key="primary"
                                                                 variant="primary"
                                                                 size="lg"
                                                                 className="m-1 mb-4 text-capitalize d-block w-100 my-2"
-                                                                onClick={(event) => handleDistributeAsset(event, asset.address, true)}
+                                                                onClick={(event) => handleDistributeAsset(event, asset.address, false)}
                                                             >
-                                                                Distribute {asset.symbol} as Ether
+                                                                Distribute {asset.name}
                                                             </Button>
                                                         </div>
-                                                    )}
-                                                </Fragment>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            </Fragment>
-                        )}
-                    </SimpleCard>
-
-                    {/* TODO: Only display this to Beneficiaries after Death has been established */}
-                    <SimpleCard title="Claim My Share of Inheritance" className="mb-4">
-                        {inheritance === null ? (
-                            <div className="loader-bubble loader-bubble-primary m-5" />
-                        ) : (
-                            <Fragment>
-                                <div>
-                                    My Shares:
-                                    <strong>{beneficiaryTotalShares > 0 ? (beneficiarySelfShares / beneficiaryTotalShares * 100).toFixed(2) + '%' : ''}</strong> ({beneficiarySelfShares} out of {beneficiaryTotalShares})
-                                </div>
-                                {inheritance.length === 0 ? (
-                                    <span />
-                                ) : (
-                                    <Fragment>
-                                        <div className="row">
-                                            {inheritance.map((asset, index) => (
-                                                <div className="col-lg-3 col-md-6 col-sm-6" key={asset.address}>
-                                                    <div className="card card-icon-bg card-icon-bg-primary o-hidden mb-4">
-                                                        <div className="card-body text-center">
-                                                            <span className={"i- icon icon-" + asset.symbol.toLowerCase()} />
-                                                            <div className="content">
-                                                                <p className="text-muted mt-2 mb-0 text-capitalize">
-                                                                    {asset.name}
-                                                                </p>
-                                                                <p className="lead text-primary text-24 mb-2 text-capitalize">
-                                                                    {asset.balance}&nbsp;{asset.symbol}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    {asset.balance > 0 && (
-                                                        <Fragment>
+                                                        {asset.address !== ethers.constants.AddressZero && (
                                                             <div>
                                                                 <Button
                                                                     key="primary"
                                                                     variant="primary"
                                                                     size="lg"
                                                                     className="m-1 mb-4 text-capitalize d-block w-100 my-2"
-                                                                    onClick={(event) => handleClaimAsset(event, asset.address, false)}
+                                                                    onClick={(event) => handleDistributeAsset(event, asset.address, true)}
                                                                 >
-                                                                    Claim {asset.name}
+                                                                    Distribute {asset.symbol} as Ether
                                                                 </Button>
                                                             </div>
-                                                            {asset.address !== ethers.constants.AddressZero && (
+                                                        )}
+                                                    </Fragment>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </Fragment>
+                            )}
+                        </SimpleCard>
+                    )}
+
+                    {/* Only display this to Beneficiaries after Death has been established */}
+                    {(beneficiarySelfShares > 0 && liveliness === 2) && (
+                        <SimpleCard title="Claim My Share of Inheritance" className="mb-4">
+                            {inheritance === null ? (
+                                <div className="loader-bubble loader-bubble-primary m-5" />
+                            ) : (
+                                <Fragment>
+                                    <div>
+                                        My Shares:
+                                        <strong>{beneficiaryTotalShares > 0 ? (beneficiarySelfShares / beneficiaryTotalShares * 100).toFixed(2) + '%' : ''}</strong> ({beneficiarySelfShares} out of {beneficiaryTotalShares})
+                                    </div>
+                                    {inheritance.length === 0 ? (
+                                        <span />
+                                    ) : (
+                                        <Fragment>
+                                            <div className="row">
+                                                {inheritance.map((asset, index) => (
+                                                    <div className="col-lg-3 col-md-6 col-sm-6" key={asset.address}>
+                                                        <div className="card card-icon-bg card-icon-bg-primary o-hidden mb-4">
+                                                            <div className="card-body text-center">
+                                                                <span className={"i- icon icon-" + asset.symbol.toLowerCase()} />
+                                                                <div className="content">
+                                                                    <p className="text-muted mt-2 mb-0 text-capitalize">
+                                                                        {asset.name}
+                                                                    </p>
+                                                                    <p className="lead text-primary text-24 mb-2 text-capitalize">
+                                                                        {asset.balance}&nbsp;{asset.symbol}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        {asset.balance > 0 && (
+                                                            <Fragment>
                                                                 <div>
                                                                     <Button
                                                                         key="primary"
                                                                         variant="primary"
                                                                         size="lg"
                                                                         className="m-1 mb-4 text-capitalize d-block w-100 my-2"
-                                                                        onClick={(event) => handleClaimAsset(event, asset.address, true)}
+                                                                        onClick={(event) => handleClaimAsset(event, asset.address, false)}
                                                                     >
-                                                                        Claim {asset.symbol} as Ether
+                                                                        Claim {asset.name}
                                                                     </Button>
                                                                 </div>
-                                                            )}
-                                                        </Fragment>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </Fragment>
-                                )}
-                            </Fragment>
-                        )}
-                    </SimpleCard>
+                                                                {asset.address !== ethers.constants.AddressZero && (
+                                                                    <div>
+                                                                        <Button
+                                                                            key="primary"
+                                                                            variant="primary"
+                                                                            size="lg"
+                                                                            className="m-1 mb-4 text-capitalize d-block w-100 my-2"
+                                                                            onClick={(event) => handleClaimAsset(event, asset.address, true)}
+                                                                        >
+                                                                            Claim {asset.symbol} as Ether
+                                                                        </Button>
+                                                                    </div>
+                                                                )}
+                                                            </Fragment>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </Fragment>
+                                    )}
+                                </Fragment>
+                            )}
+                        </SimpleCard>
+                    )}
 
                     <Card className="mb-4">
                         <Card.Body>
