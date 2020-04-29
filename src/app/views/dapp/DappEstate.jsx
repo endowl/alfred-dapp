@@ -87,7 +87,8 @@ function DappEstate(props) {
     const [executor, setExecutor] = useState('');
     const [gnosisSafe, setGnosisSafe] = useState('');
     const [liveliness, setLiveliness] = useState(0);
-    const [beneficiaries, setBeneficiaries] = useState([]);
+    // const [beneficiaries, setBeneficiaries] = useState([]);
+    const [beneficiaries, setBeneficiaries] = useState(null);
     const [trackedTokens, setTrackedTokens] = useState([]);
     const [assets, setAssets] = useState([]);
     const [isOwner, setIsOwner] = useState(false);
@@ -318,6 +319,26 @@ function DappEstate(props) {
                     assetAddress = null
                 }
             } while (assetAddress !== null);
+
+            // Track some tokens automatically
+            let defaultTokens = [
+                "0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa",  // KOVAN Dai
+                "0x6B175474E89094C44Da98b954EedeAC495271d0F",  // Mainnet Dai
+                "0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643",  // Mainnet Compound Dai
+            ];
+
+            for (let i = 0; i < defaultTokens.length; i++) {
+                if(!_trackedTokens.includes(defaultTokens[i])) {
+                    _trackedTokens.push(defaultTokens[i]);
+                }
+
+            }
+            // const token_dai = "0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa";  // KOVAN Dai
+            // const token_dai = "0x6B175474E89094C44Da98b954EedeAC495271d0F";  // Mainnet Dai
+            // if(!_trackedTokens.includes(token_dai)) {
+            //     _trackedTokens.push(token_dai);
+            // }
+
             setTrackedTokens(_trackedTokens);
 
             // Load assets
@@ -575,6 +596,58 @@ function DappEstate(props) {
                         </div>
                     )}
 
+                    <SimpleCard title="Distribute Inheritance to Beneficiaries" className="mb-4">
+                        {assets.length === 0 ? (
+                            <div className="loader-bubble loader-bubble-primary m-5" />
+                        ) : (
+                            <Fragment>
+                                <div className="row">
+                                    {assets.map((asset, index) => (
+                                        <div className="col-lg-3 col-md-6 col-sm-6" key={asset.address}>
+                                            <div className="card card-icon-bg card-icon-bg-primary o-hidden mb-4">
+                                                <div className="card-body text-center">
+                                                    <span className={"i- icon icon-" + asset.symbol.toLowerCase()} />
+                                                    <div className="content">
+                                                        <p className="text-muted mt-2 mb-0 text-capitalize">
+                                                            {asset.name}
+                                                        </p>
+                                                        <p className="lead text-primary text-24 mb-2 text-capitalize">
+                                                            {asset.balance}&nbsp;{asset.symbol}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <Button
+                                                    key="primary"
+                                                    variant="primary"
+                                                    size="lg"
+                                                    className="m-1 mb-4 text-capitalize d-block w-100 my-2"
+                                                    onClick={() => setShowTodo(true)}
+                                                >
+                                                    Distribute {asset.name}
+                                                </Button>
+                                            </div>
+                                            {asset.address !== ethers.constants.AddressZero && (
+                                                <div>
+                                                    <Button
+                                                        key="primary"
+                                                        variant="primary"
+                                                        size="lg"
+                                                        className="m-1 mb-4 text-capitalize d-block w-100 my-2"
+                                                        onClick={() => setShowTodo(true)}
+                                                    >
+                                                        Distribute {asset.symbol} as Ether
+                                                    </Button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </Fragment>
+                        )}
+                    </SimpleCard>
+
                     <Card className="mb-4">
                         <Card.Body>
                             <div className="card-title d-flex align-items-center">
@@ -586,53 +659,63 @@ function DappEstate(props) {
                                 </span>
                             </div>
                             <div>
-                                {beneficiaries.length === 0 ? (
-                                    <span> </span>
+                                {beneficiaries === null ? (
+                                    <div className="loader-bubble loader-bubble-primary m-5" />
                                 ) : (
                                     <Fragment>
-                                        <div className="table-responsive">
-                                            <table className="table table-bordered table-sm text-center">
-                                                <thead>
-                                                <tr>
-                                                    <th>#</th>
-                                                    <th>Address</th>
-                                                    <th>Shares</th>
-                                                    <th>Action</th>
-                                                </tr>
-                                                </thead>
-                                                <tbody>
-                                                {beneficiaries.map((beneficiary, index) => (
-                                                    <tr key={beneficiary.address}>
-                                                        <th scope="row">
-                                                            {index + 1}
-                                                        </th>
-                                                        <td>
-                                                            <EthereumAddress address={beneficiary.address}
-                                                                             chainId={chainId}>
-                                                                {beneficiary.address}
-                                                            </EthereumAddress>
-                                                        </td>
-                                                        <td>
-                                                            {beneficiary.shares}
-                                                        </td>
-                                                        <td>
-                                                                    <span className="cursor-pointer text-success mr-2">
-                                                                        <i className="nav-icon i-Pen-2 font-weight-bold"
-                                                                           title="Edit beneficiary"
-                                                                           onClick={() => setShowTodo(true)} />
-                                                                    </span>
-                                                            <span className="cursor-pointer text-danger mr-2">
-                                                                        <i className="nav-icon i-Close-Window font-weight-bold"
-                                                                           title="Remove beneficiary"
-                                                                           onClick={() => setShowTodo(true)} />
-                                                                    </span>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                        <BeneficiaryPieChart beneficiaries={beneficiaries} />
+                                        {beneficiaries.length === 0 ? (
+                                            <span> </span>
+                                        ) : (
+                                            <Fragment>
+                                                <div className="table-responsive">
+                                                    <table className="table table-bordered table-sm text-center">
+                                                        <thead>
+                                                        <tr>
+                                                            <th>#</th>
+                                                            <th>Address</th>
+                                                            <th>Shares</th>
+                                                            {(isOwner || (wallet.address === executor && liveliness === 2)) && (
+                                                                <th>Action</th>
+                                                            )}
+                                                        </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                        {beneficiaries.map((beneficiary, index) => (
+                                                            <tr key={beneficiary.address}>
+                                                                <th scope="row">
+                                                                    {index + 1}
+                                                                </th>
+                                                                <td>
+                                                                    <EthereumAddress address={beneficiary.address}
+                                                                                     chainId={chainId}>
+                                                                        {beneficiary.address}
+                                                                    </EthereumAddress>
+                                                                </td>
+                                                                <td>
+                                                                    {beneficiary.shares}
+                                                                </td>
+                                                                {(isOwner || (wallet.address === executor && liveliness === 2)) && (
+                                                                    <td>
+                                                                                <span className="cursor-pointer text-success mr-2">
+                                                                                    <i className="nav-icon i-Pen-2 font-weight-bold"
+                                                                                       title="Edit beneficiary"
+                                                                                       onClick={() => setShowTodo(true)} />
+                                                                                </span>
+                                                                        <span className="cursor-pointer text-danger mr-2">
+                                                                                    <i className="nav-icon i-Close-Window font-weight-bold"
+                                                                                       title="Remove beneficiary"
+                                                                                       onClick={() => setShowTodo(true)} />
+                                                                                </span>
+                                                                    </td>
+                                                                )}
+                                                            </tr>
+                                                        ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                                <BeneficiaryPieChart beneficiaries={beneficiaries} />
+                                            </Fragment>
+                                        )}
                                     </Fragment>
                                 )}
                             </div>
@@ -651,7 +734,7 @@ function DappEstate(props) {
                             </div>
                             <div>
                                 {assets.length === 0 ? (
-                                    <span> </span>
+                                    <div className="loader-bubble loader-bubble-primary m-5" />
                                 ) : (
                                     <Fragment>
 
@@ -689,9 +772,15 @@ function DappEstate(props) {
                                                 {assets.map((asset, index) => (
                                                     <tr key={asset.address}>
                                                         <th scope="row">
-                                                            <EthereumAddress address={asset.address} chainId={chainId}>
-                                                                {asset.name}
-                                                            </EthereumAddress>
+                                                            {asset.address === ethers.constants.AddressZero ? (
+                                                                <Fragment>
+                                                                    {asset.name}
+                                                                </Fragment>
+                                                            ) : (
+                                                                <EthereumAddress address={asset.address} chainId={chainId}>
+                                                                    {asset.name}
+                                                                </EthereumAddress>
+                                                            )}
                                                         </th>
                                                         <td>
                                                             {asset.balance} {asset.symbol}
