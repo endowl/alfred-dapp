@@ -1,5 +1,6 @@
 // call stake(amountOfDai) on SimpleStaking contract
 import { contract } from './contractConnect'
+import {NotificationManager} from "react-notifications";
 
 export async function stake(amount){
     console.log("contract:", contract)
@@ -14,6 +15,11 @@ export async function stake(amount){
     // sendPromise.then((tx) => {
     //     console.log("sendPromise.then:", tx);
     // });
+
+    NotificationManager.success(
+        "Your Dai has been staked with rDAI and is now generating donations from the interest",
+        "Success"
+    );
 
     return true;
 }
