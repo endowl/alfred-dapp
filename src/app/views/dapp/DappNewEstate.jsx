@@ -15,7 +15,7 @@ const CPK = require('contract-proxy-kit');
 // const boydFactoryAddress = "0xDEAD78Ed0A13909CB8F6919E32308515373e6d2d";
 // const boydFactoryAddress = "0x0bBc6D455611718aFA0Db939d1C41ABe283ECc8F";  // Ropsten
 // const boydFactoryAddress = "0x5Ca258619d7Ea8A81c2f78C25B8AD85151F33CBD";  // Kovan v0.2
-const boydFactoryAddress = "0xDEAD120FB5Aad12a3D3cAd140C66dad2A6739422";  // v0.3.1 Kovan
+const boydFactoryAddress = "0xDEAD120FB5Aad12a3D3cAd140C66dad2A6739422";  // v0.3.1 Kovan + Mainnet
 
 function NewEstateForm(props) {
     const wallet = useWallet();
@@ -212,7 +212,8 @@ function NewEstateForm(props) {
                     Transaction submitted
                 </Alert.Heading>
                 <p>
-                    Your transaction has been sent and is pending inclusion in the blockchain. You may <LinkEtherscanTx txHash={txHash} chainId="42">follow the transaction on Etherscan.</LinkEtherscanTx>
+                    {/* TODO: Auto select chainID */}
+                    Your transaction has been sent and is pending inclusion in the blockchain. You may <LinkEtherscanTx txHash={txHash} chainId="1">follow the transaction on Etherscan.</LinkEtherscanTx>
                 </p>
             </Alert>
             <Alert variant="success" show={status === statuses.SUCCESS}>
