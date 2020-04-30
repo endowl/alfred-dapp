@@ -20,27 +20,29 @@ Alfred uses the Gnosis Safe contract proxy kit to let users create or sync their
 
 The dApp uses transaction batching to create or sync the Gnosis Safe and set the owner as the individual deploying the transaction.
 
-[Create estate screenshot](https://github.com/BatmansButler/alfred-dapp/images/newestate.jpg)
+<img src="images/newestate.jpg?raw=true"/>
 
 #### Designate an executor and beneficiaries and assign shares for inheritances
 Set the addresses you want to receive your assets and assign shares to allow them to claim their inheritance. The owner of an Estate can also designate an executor. 
 
-[Designate beneficiaries screenshot](https://github.com/BatmansButler/alfred-dapp/images/beneficiary.jpg)
+<img src="images/beneficiary.jpg?raw=true"/>
 
 #### Set up Recovery
 In addition to serving as your personal Estate, the "Bring Out Your Dead" smart contract also provides a Gnosis Safe Recovery Module. If the owner ever loses their keys, the Recovery Module enables your Gnosis Safe and Estate to be recovered with the help of the executor and beneficiaries based on the owners preferences.
 
+<img src="images/recovery.jpg?raw=true"/>
+
 #### Generate proof-of-life using the decentralized dead man's switch
 Set the number of days you want to go between checking in with Alfred and activate your estate plan with the flip of a switch. Providing proof-of-life is as simple as clicking the "Check-In" button on your Estate Dashboard.
 
-[DMS screenshot](https://github.com/BatmansButler/alfred-dapp/images/estatedms.jpg)
+<img src="images/estatedms.jpg?raw=true"/>
 
 When the dead man's switch stops generating proof-of-life, assets stored in the Estate and in your Gnosis Safe are distributed to the beneficiaries according to the wishes of the deceased. 
 
 #### Token Tracker
 Once you've deposited funds, use the Token Tracker on the Estate Dashboard to keep track of the value of your estate.
 
-[Token Tracker screenshot](https://github.com/BatmansButler/alfred-dapp/images/tokentracker.jpg)
+<img src="images/tokentracker.jpg?raw=true"/>
 
 #### Have we got your interest? Allow us to hodl it with RDai!
 Support our work through direct donations OR stake with RDai and allow us to keep the interest to fund continued development *without* losing your assets.
