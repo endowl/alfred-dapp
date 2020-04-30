@@ -5,9 +5,10 @@ Alfred is a decentralized crypto inheritance solution.
 Missing or stolen private keys have already caused the loss of millions of dollars worth of digital assets. As more and more individuals embrace the ideals of decentralization, a pivotal question remains: “what happens to my digital assets when I can’t access them anymore?”
 
 Website: http://alpha.alfred.estate/
+
 Demo: https://youtu.be/855X8umwjl8
 
-The "Bring Out Your Dead Factory" is deployed at 0xDEAD120FB5Aad12a3D3cAd140C66dad2A6739422 on Kovan Testnet and the Ethereum Mainnet.
+Smart Contract (Mainnet): 0xDEAD120FB5Aad12a3D3cAd140C66dad2A6739422
 
 ## How it works
 To secure your digital estate, simply create or sync a Gnosis Safe, designate your beneficiaries and how much of your assets they should receive, and set the check-in period on our decentralized dead man’s switch.
