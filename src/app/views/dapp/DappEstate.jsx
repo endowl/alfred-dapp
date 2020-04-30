@@ -1,8 +1,8 @@
-import React, {Component, useState, Fragment, useEffect} from "react";
+import React, {useState, Fragment, useEffect} from "react";
 import {Breadcrumb, SimpleCard, CodeViewer} from "@gull";
 import {useWallet} from "use-wallet";
 import EthereumDapp from "./EthereumDapp";
-import {Alert, Badge, Card, Dropdown, OverlayTrigger, Tooltip} from "react-bootstrap";
+import {Badge, Card} from "react-bootstrap";
 import {Form, Modal, Button} from "react-bootstrap";
 import {ethers} from 'ethers';
 import bringOutYourDeadAbi from "../../../abi/bringOutYourDeadAbi";
@@ -12,8 +12,7 @@ import gnosisOwnerManagerAbi from "../../../abi/gnosisOwnerManagerAbi";
 import EthereumAddress from './EthereumAddress';
 import localStorageService from "../../services/localStorageService";
 import PieChart from "./PieChart";
-import {CopyToClipboard} from 'react-copy-to-clipboard';
-import bringOutYourDeadFactoryAbi from "../../../abi/bringOutYourDeadFactoryAbi";
+// import bringOutYourDeadFactoryAbi from "../../../abi/bringOutYourDeadFactoryAbi";
 import {NotificationManager} from "react-notifications";
 
 // Gnosis Proxy Kit
@@ -42,8 +41,7 @@ function EditExecutor(props) {
         setShow(false);
     };
 
-    // TODO: Handle executor change
-
+    // TODO: Finish handling executor updates
     return (
         <Fragment>
             <Button className="text-capitalize" onClick={() => setShow(true)}>
@@ -93,7 +91,6 @@ function DappEstate(props) {
     const [executor, setExecutor] = useState('');
     const [gnosisSafe, setGnosisSafe] = useState('');
     const [liveliness, setLiveliness] = useState(0);
-    // const [beneficiaries, setBeneficiaries] = useState([]);
     const [beneficiaries, setBeneficiaries] = useState(null);
     const [beneficiarySelfShares, setBeneficiarySelfShares] = useState(0);
     const [beneficiaryTotalShares, setBeneficiaryTotalShares] = useState(0);
@@ -114,6 +111,12 @@ function DappEstate(props) {
     const [gnosisRecoveryFormExecutor, setGnosisRecoveryFormExecutor] = useState(false);
     const [gnosisRecoveryFormMinBeneficiaries, setGnosisRecoveryFormMinBeneficiaries] = useState('');
     const [gnosisRecoveryFormNewOwner, setGnosisRecoveryFormNewOwner] = useState('');
+    const [isDeadMansSwitchEnabled, setIsDeadMansSwitchEnabled] = useState(false);
+    const [deadMansSwitchCheckinSeconds, setDeadMansSwitchCheckinSeconds] = useState(0);
+    const [deadMansSwitchLastCheckin, setDeadMansSwitchLastCheckin] = useState(ethers.utils.bigNumberify(0));
+    const [isDeadMansSwitchFormEnabled, setIsDeadMansSwitchFormEnabled] = useState(false);
+    // const [deadMansSwitchFormCheckinSeconds, setDeadMansSwitchFormCheckinSeconds] = useState(0);
+    const [deadMansSwitchFormCheckinMinutes, setDeadMansSwitchFormCheckinMinutes] = useState(0);
 
     async function handleUpdateGnosisSafeRecovery(event) {
         event.preventDefault();
@@ -191,16 +194,12 @@ function DappEstate(props) {
             );
         });
 
-        // Send multi-TX through Gnosis Safe, causing Safe to be deployed if it hasn't yet
+        // Send multi-TX through Gnosis Safe
         try {
-            // let cpkHash = await cpk.execTransactions(txs, {gasLimit: 5000000});
             let cpkHash = await cpk.execTransactions(txs);
-            // setTxHash(cpkHash.hash);
             console.log(cpkHash);
-            // setStatus(statuses.PROCESSING);
         } catch (e) {
-            console.log(e);
-            // setStatus(statuses.ERROR);
+            console.log("Error sending multi-TX through Gnosis Safe", e);
             NotificationManager.error(
                 "There was a problem transacting through Gnosis Safe.",
                 "Error sending transaction"
@@ -208,10 +207,69 @@ function DappEstate(props) {
         }
     }
 
+    async function handleUpdateDeadMansSwitch(event) {
+        event.preventDefault();
+        let provider = new ethers.providers.Web3Provider(wallet.ethereum);
+        const signer = provider.getSigner(0);
+        // NOTE: The CPK makes incorrect assumptions about the address of the Gnosis Safe if the owner has changed
+        const cpk = await CPK.create({ethers, signer: signer});
+
+        // Prepare calldata for multi-transaction call to Gnosis Safe by way of Contract Proxy Kit
+        const boydInterface = new ethers.utils.Interface(bringOutYourDeadAbi);
+        let txs = [];
+        const checkinSeconds = deadMansSwitchFormCheckinMinutes > 0 ? deadMansSwitchFormCheckinMinutes * 60 : 0;
+        const enabledData = boydInterface.functions.setIsDeadMansSwitchEnabled.encode([isDeadMansSwitchFormEnabled]);
+        const periodData = boydInterface.functions.setDeadMansSwitchCheckinSeconds.encode([checkinSeconds]);
+
+        txs.push({
+            operation: CPK.CALL,
+            to: estateAddress,
+            value: 0,
+            data: enabledData
+        });
+
+        txs.push({
+            operation: CPK.CALL,
+            to: estateAddress,
+            value: 0,
+            data: periodData
+        });
+
+        // Listen for events and update accordingly
+        let estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
+        estateContract.on("DeadMansSwitchCheckinSecondsChanged", async (newValue, event) => {
+            console.log("DeadMansSwitchCheckinSecondsChanged: ", newValue);
+            NotificationManager.success(
+                "The dead man's switch check-in period has been updated.",
+                "Settings Updated"
+            );
+        });
+        estateContract.on("IsDeadMansSwitchEnabledChanged", async (newValue, event) => {
+            console.log("IsDeadMansSwitchEnabledChanged: ", newValue);
+            const status = newValue ? 'enabled' : 'disabled';
+            NotificationManager.success(
+                "The dead man's switch has been " + status + ".",
+                "Settings Updated"
+            );
+        });
+
+        // Send multi-TX through Gnosis Safe
+        try {
+            let cpkHash = await cpk.execTransactions(txs);
+            console.log(cpkHash);
+        } catch (e) {
+            console.log("Error updating dead man's switch settings with multi-TX through Gnosis Safe", e);
+            NotificationManager.error(
+                "There was a problem transacting through Gnosis Safe.",
+                "Error sending transaction"
+            );
+        }
+
+    }
+
 
     async function handleDistributeAsset(event, address, asEther) {
         event.preventDefault();
-
         let provider = new ethers.providers.Web3Provider(wallet.ethereum);
         const signer = provider.getSigner(0);
         let estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
@@ -237,8 +295,7 @@ function DappEstate(props) {
                 // TODO: Refresh asset balances
             })
         } catch (e) {
-            console.log("ERROR while waiting for transaction to complete");
-            console.log(e);
+            console.log("ERROR while waiting for asset distribution transaction to complete", e);
             NotificationManager.error(
                 "There was a problem distributing asset to beneficiaries.",
                 "Error sending transaction"
@@ -278,8 +335,7 @@ function DappEstate(props) {
                 // TODO: Refresh asset balances
             })
         } catch (e) {
-            console.log("ERROR while waiting for transaction to complete");
-            console.log(e);
+            console.log("ERROR while waiting for inheritance claim transaction to complete", e);
             NotificationManager.error(
                 "There was a problem claiming share of inheritance.",
                 "Error sending transaction"
@@ -312,8 +368,7 @@ function DappEstate(props) {
 
 
         } catch (e) {
-            console.log("ERROR while waiting for transaction to complete");
-            console.log(e);
+            console.log("ERROR while waiting for addBeneficiary transaction to complete", e);
         }
     }
 
@@ -401,7 +456,7 @@ function DappEstate(props) {
         //       old owner address and incorrectly calculate the Gnosis Safe address.  The Gnosis Safe address is
         //       saved on the Estate contract, but unclear how to force CPK to use it without knowing original owner
         // NOTE: One solution would simply be to interact directly with Gnosis Safe and not use the CPK for this TX
-        // TODO: Assess risk this technique will only work for first recovery
+        // TODO: Explore risk this technique will only work for first recovery
         // Initialize Gnosis Contract Proxy Kit using old owner address, to correctly generate Gnosis Safe address
         const cpk = await CPK.create({ethers, signer: signer, ownerAccount: owner});
         // console.log("cpk", cpk);
@@ -557,6 +612,16 @@ function DappEstate(props) {
             }
 
             // TODO: Load Dead Man's Switch settings from estate
+            const dmsEnabed = await estateContract.isDeadMansSwitchEnabled();
+            setIsDeadMansSwitchEnabled(dmsEnabed);
+            setIsDeadMansSwitchFormEnabled(dmsEnabed);
+
+            const dmsCheckinSeconds = await estateContract.deadMansSwitchCheckinSeconds();
+            setDeadMansSwitchCheckinSeconds(dmsCheckinSeconds);
+            setDeadMansSwitchFormCheckinMinutes(dmsCheckinSeconds.mul(60));
+
+            const dmsLastCheckin = await estateContract.deadMansSwitchLastCheckin();
+            setDeadMansSwitchLastCheckin(dmsLastCheckin);
 
             // Load beneficiary details
             refreshBeneficiaries();
@@ -797,34 +862,38 @@ function DappEstate(props) {
                         </div>
                     </SimpleCard>
 
+                    {/* TODO: Display dead man's switch status but not controls to non-owners */}
                     {isOwner && (
                         <div className="row">
                             <div className="col-lg-6">
                                 <SimpleCard title="Dead Man's Switch" className="mb-4">
-                                    <Form>
-                                        <Form.Check type="switch" id="deadManEnabled" label="Enabled"/>
+                                    <Form onSubmit={handleUpdateDeadMansSwitch}>
+                                        <Form.Check
+                                            type="switch"
+                                            id="deadManEnabled"
+                                            label="Enabled"
+                                            checked={isDeadMansSwitchFormEnabled}
+                                            onChange={(event) => setIsDeadMansSwitchFormEnabled(event.target.checked)}
+                                        />
                                         <div className="form-group mb-3">
-                                            <label htmlFor="deadManCheckInDays">Maximum number of days between Check-ins</label>
+                                            <label htmlFor="deadManCheckInDays">
+                                                Maximum number of <em title="Check-in period step size will be changed from 'minutes' to 'days' in the dApp after alpha">minutes</em> between Check-ins:
+                                            </label>
+                                            {/* TODO: Change check-in period step size from minutes to days after alpha*/}
                                             <input
                                                 className="form-control"
                                                 id="deadManCheckInDays"
-                                                placeholder="Check-in period in days"
+                                                placeholder="Check-in period in minutes"
+                                                value={deadMansSwitchFormCheckinMinutes}
+                                                onChange={(event) => setDeadMansSwitchFormCheckinMinutes(event.target.value)}
                                             />
                                         </div>
-                                    </Form>
-                                    <div className="row">
-                                        <div className="col-lg-6 col-md-12 col-sm-12">
-                                            <Button
-                                                key="primary"
-                                                variant="primary"
-                                                size="lg"
-                                                className="m-1 mb-4 text-capitalize d-block w-100 my-2"
-                                                onClick={() => setShowTodo(true)}
-                                            >
-                                                I'm Alive - Check-in Now!
+                                        <div className="mb-3">
+                                            <Button type="submit" variant="primary">
+                                                Update
                                             </Button>
                                         </div>
-                                    </div>
+                                    </Form>
                                     <div className="row">
                                         <div className="col-lg-6 col-md-12 col-sm-12">
                                             <div className="card card-icon-bg card-icon-bg-primary o-hidden mb-4">
@@ -835,11 +904,30 @@ function DappEstate(props) {
                                                             Last Check-In
                                                         </p>
                                                         <p className="lead text-primary text-24 mb-2 text-capitalize">
-                                                            ...&nbsp;days
+                                                            {deadMansSwitchLastCheckin.eq(0) ? (
+                                                                <span>Never</span>
+                                                            ) : (
+                                                                <span>{deadMansSwitchLastCheckin.toString()}&nbsp;minutes</span>
+
+                                                            )}
                                                         </p>
                                                     </div>
                                                 </div>
                                             </div>
+                                        </div>
+                                    </div>
+                                    <div className="row">
+                                        <div className="col-lg-6 col-md-12 col-sm-12">
+                                            <Button
+                                                key="primary"
+                                                // variant="primary"
+                                                variant="success"
+                                                size="lg"
+                                                className="m-1 mb-4 text-capitalize d-block w-100 my-2"
+                                                onClick={() => setShowTodo(true)}
+                                            >
+                                                I'm Alive - Check-in Now!
+                                            </Button>
                                         </div>
                                     </div>
                                 </SimpleCard>
