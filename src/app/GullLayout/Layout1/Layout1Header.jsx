@@ -17,6 +17,7 @@ import { withRouter } from "react-router-dom";
 import { merge } from "lodash";
 import MegaMenu from "@gull/components/MegaMenu";
 import {useWallet} from "use-wallet";
+import localStorageService from "../../services/localStorageService";
 
 function WalletConnection() {
     const wallet = useWallet();
@@ -39,7 +40,10 @@ function WalletConnection() {
                 <div className="dropdown-header">
                   <i className="i-Lock-User mr-1"></i> {wallet.account}
                 </div>
-                <button className="dropdown-item cursor-pointer" onClick={() => wallet.deactivate()}>
+                <button className="dropdown-item cursor-pointer" onClick={() => {
+                    wallet.deactivate();
+                    localStorageService.setItem('connectWallet', false);
+                }}>
                   Disconnect
                 </button>
               </DropdownMenu>
@@ -60,9 +64,21 @@ function WalletConnection() {
                 <div className="dropdown-header">
                   <i className="i-Lock-User mr-1"></i> Not connected
                 </div>
-                <button className="dropdown-item cursor-pointer" onClick={() => wallet.activate()}>MetaMask</button>
-                <button className="dropdown-item cursor-pointer" onClick={() => wallet.activate('frame')}>Frame</button>
-                <button className="dropdown-item cursor-pointer" onClick={() => wallet.activate('portis')}>Portis</button>
+                <button className="dropdown-item cursor-pointer" onClick={() => {
+                    wallet.activate();
+                    localStorageService.setItem('connectWallet', true);
+                    localStorageService.setItem('walletProvider', null);
+                }}>MetaMask</button>
+                <button className="dropdown-item cursor-pointer" onClick={() => {
+                    wallet.activate('frame');
+                    localStorageService.setItem('connectWallet', true);
+                    localStorageService.setItem('walletProvider', 'frame');
+                }}>Frame</button>
+                <button className="dropdown-item cursor-pointer" onClick={() => {
+                    wallet.activate('portis');
+                    localStorageService.setItem('connectWallet', true);
+                    localStorageService.setItem('walletProvider', 'portis');
+                }}>Portis</button>
               </DropdownMenu>
             </Dropdown>
             )}

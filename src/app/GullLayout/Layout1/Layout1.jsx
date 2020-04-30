@@ -14,6 +14,11 @@ import { setLayoutSettings } from "app/redux/actions/LayoutActions";
 import { merge } from "lodash";
 import Loading from "@gull/components/GullLoadable/Loading";
 
+import {
+  NotificationContainer,
+} from "react-notifications";
+
+
 class Layout1 extends Component {
   state = {};
 
@@ -56,6 +61,7 @@ class Layout1 extends Component {
                     open={settings.layout1Settings.searchBox.open}
                     handleClose={this.handleSearchBoxClose}
                 ></GullSearch>
+                <NotificationContainer/>
             </div>
     );
   }

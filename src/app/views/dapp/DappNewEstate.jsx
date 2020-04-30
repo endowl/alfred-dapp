@@ -1,27 +1,29 @@
-import React, {Component, useState, Fragment} from "react";
-import { Breadcrumb, SimpleCard, CodeViewer } from "@gull";
+import React, {useState, useEffect} from "react";
+import { Breadcrumb, SimpleCard} from "@gull";
 import { useWallet } from "use-wallet";
 import EthereumDapp from "./EthereumDapp";
-import {Alert} from "react-bootstrap";
+import {Alert, Button} from "react-bootstrap";
 import { ethers } from 'ethers';
 import bringOutYourDeadFactoryAbi from "../../../abi/bringOutYourDeadFactoryAbi";
-import LinkEtherscanAddress from './LinkEtherscanAddress';
+import bringOutYourDeadAbi from "../../../abi/bringOutYourDeadAbi";
 import LinkEtherscanTx from './LinkEtherscanTx';
+import { Link } from 'react-router-dom';
+import localStorageService from "../../services/localStorageService";
+const CPK = require('contract-proxy-kit');
 
-function NewEstateForm() {
+// TODO: Move this to a config file and support multiple networks automatically
+// const boydFactoryAddress = "0xDEAD78Ed0A13909CB8F6919E32308515373e6d2d";
+// const boydFactoryAddress = "0x0bBc6D455611718aFA0Db939d1C41ABe283ECc8F";  // Ropsten
+// const boydFactoryAddress = "0x5Ca258619d7Ea8A81c2f78C25B8AD85151F33CBD";  // Kovan v0.2
+const boydFactoryAddress = "0xDEAD120FB5Aad12a3D3cAd140C66dad2A6739422";  // v0.3.1 Kovan + Mainnet
+
+function NewEstateForm(props) {
     const wallet = useWallet();
     const [status, setStatus] = useState();
     const [txHash, setTxHash] = useState('');
     const [estateAddress, setEstateAddress] = useState('');
     const [oracle, setOracle] = useState('');
     const [executor, setExecutor] = useState('');
-
-    // TODO: Automatically set chainID used in LinkEtherscanAddress components to the current network
-
-    // TODO: Move this to a config file and support multiple networks
-    // const boydFactoryAddress = "0xDEAD78Ed0A13909CB8F6919E32308515373e6d2d";
-    // const boydFactoryAddress = "0x0bBc6D455611718aFA0Db939d1C41ABe283ECc8F";  // Ropsten
-    const boydFactoryAddress = "0xc1A8436f6f0a98346b01B8E855E0BdF9a26e1453";  // Kovan
 
     const statuses = {
         PROMPTING: 'prompting',
@@ -34,21 +36,99 @@ function NewEstateForm() {
         event.preventDefault();
         console.log(wallet);
 
+        // Use Gnosis Contract Proxy Kit (CPK) to create a Gnosis Safe
+        // Use TX batching to make a single call to Gnosis Safe which:
+        //       - Creates the Gnosis Safe (automatic on first TX)
+        //       - Creates Alfred BOYD Estate contract
+        //       - Set's wallet address as owner of Estate contract
+
+        // TODO: Set estate as recovery option for Gnosis Safe
+
         const oracleParam = oracle !== '' ? oracle : ethers.constants.AddressZero;
-        const executorParam = oracle !== '' ? oracle : ethers.constants.AddressZero;
+        const executorParam = executor !== '' ? executor : ethers.constants.AddressZero;
+
+        // TODO: Sanity check oracle and executor addresses
+        console.log("Oracle", oracleParam);
+        console.log("Executor", executorParam);
 
         let provider = new ethers.providers.Web3Provider(wallet.ethereum);
         const signer = provider.getSigner(0);
+
+        // Bring Out Your Dead (Alfred Estate) Factory
         let boydFactory = new ethers.Contract(boydFactoryAddress, bringOutYourDeadFactoryAbi, signer);
 
-        // TODO: Sanity check oracle and executor addresses
+        // Gnosis Contract Proxy Kit
+        const cpk = await CPK.create( { ethers, signer: signer } );
+
+        const expectedEstateAddress = await boydFactory.getEstateAddress(cpk.address, props.salt);
+        console.log("Expected estate address: ", expectedEstateAddress);
+
+        // Prepare calldata for multi-transaction call to Gnosis Safe by way of Contract Proxy Kit
+        const boydFactoryInterface = new ethers.utils.Interface(bringOutYourDeadFactoryAbi);
+        const boydInterface = new ethers.utils.Interface(bringOutYourDeadAbi);
+
+
+        let newEstateData = boydFactoryInterface.functions.newEstate.encode([oracleParam, executorParam, props.salt]);
+        // TODO: Add call to boydInterface.functions.setupGnosisSafe.encode(.....)
+        let gnosisSetupData = boydInterface.functions.gnosisSafeSetup.encode([]);
+        let transferOwnershipData = boydInterface.functions.transferOwnership.encode([wallet.account]);
+
+        const txs = [
+            {
+                operation: CPK.CALL,
+                to: boydFactoryAddress,
+                value: 0,
+                data: newEstateData
+            },
+            {
+                operation: CPK.CALL,
+                to: expectedEstateAddress,
+                value: 0,
+                data: gnosisSetupData
+            },
+            {
+                operation: CPK.CALL,
+                to: expectedEstateAddress,
+                value: 0,
+                data: transferOwnershipData
+            }
+        ];
+
+        // Listen for estate creation event
+        let filter = boydFactory.filters.estateCreated(null, cpk.address);
+        boydFactory.on(filter, async (fromAddress, toAddress, value, event) => {
+            console.log('Estate created!');
+            let address = await boydFactory.getEstateAddress(cpk.address, props.salt);
+            console.log('Estate address', address);
+            // TODO: Sanity check address matches expected address
+            setEstateAddress(address);
+            localStorageService.setItem('estate', address);
+            setStatus(statuses.SUCCESS);
+        });
 
         setStatus(statuses.PROMPTING);
 
+        // Send multi-TX through Gnosis Safe, causing Safe to be deployed if it hasn't yet
+        try {
+            let cpkHash = await cpk.execTransactions(txs, {gasLimit: 5000000});
+            setTxHash(cpkHash.hash);
+            console.log(cpkHash);
+            setStatus(statuses.PROCESSING);
+        } catch (e) {
+            console.log(e);
+            setStatus(statuses.ERROR);
+        }
+
+        
+        // Direct factory interaction without Gnosis CPK:
+        /*
         let tx;
         try {
             // Prompt user's wallet to send transaction to factory contract
-            tx = await boydFactory.newEstate(oracleParam, executorParam);
+            // tx = await boydFactory.newEstate(oracleParam, executorParam);
+            tx = await boydFactory.newEstate(oracleParam, executorParam, salt, {gasLimit: 5000000});
+
+
         } catch(e) {
             console.log(e);
             setStatus(statuses.ERROR);
@@ -56,42 +136,54 @@ function NewEstateForm() {
         }
 
         // User approved the transaction
-        console.log(tx);
         setTxHash(tx.hash);
         setStatus(statuses.PROCESSING);
 
         // Wait for transaction to complete
-        let receipt = await tx.wait(1);
+        let receipt;
+        try {
+            receipt = await tx.wait(1);
 
-        // Get new estate contract address from transaction events
-        let address = receipt.events[1].args['estate'].substr(-40);
-        address = ethers.utils.getAddress(address);
-        console.log(address);
-        setEstateAddress(address);
+            // Get new estate contract address from transaction events
+            let address = receipt.events[1].args['estate'].substr(-40);
+            address = ethers.utils.getAddress(address);
+            console.log(address);
+            setEstateAddress(address);
 
-        // console.log(receipt.events);
-        // console.log(receipt);
+            localStorageService.setItem('estate', address);
 
-        // Transaction is complete
-        setStatus(statuses.SUCCESS);
+            // console.log(receipt.events);
+            // console.log(receipt);
+
+            // Transaction is complete
+            setStatus(statuses.SUCCESS);
+
+        } catch (e) {
+            console.log("ERROR while waiting for transaction to complete");
+            console.log(e);
+            setStatus(statuses.ERROR);
+            // return;
+        }
+        */
+
     }
 
     return (
         <form onSubmit={handleSubmit}>
             <div className="row">
+                {/*<div className="col-md-6 form-group mb-3">*/}
+                {/*    <label htmlFor="oracleAddress">Oracle Address - leave blank if unknown</label>*/}
+                {/*    <input*/}
+                {/*        type="text"*/}
+                {/*        className="form-control"*/}
+                {/*        name="oracle"*/}
+                {/*        placeholder="0x.... Oracle contract's Ethereum address"*/}
+                {/*        value={oracle}*/}
+                {/*        onChange={(event) => setOracle(event.target.value)}*/}
+                {/*    />*/}
+                {/*</div>*/}
                 <div className="col-md-6 form-group mb-3">
-                    <label htmlFor="oracleAddress">Oracle Address - leave blank if unknown</label>
-                    <input
-                        type="text"
-                        className="form-control"
-                        name="oracle"
-                        placeholder="0x.... Oracle contract's Ethereum address"
-                        value={oracle}
-                        onChange={(event) => setOracle(event.target.value)}
-                    />
-                </div>
-                <div className="col-md-6 form-group mb-3">
-                    <label htmlFor="executorAddress">Executor Address - leave blank if unknown</label>
+                    <label htmlFor="executorAddress">Executor Address - may be left blank and configured later</label>
                     <input
                         type="text"
                         className="form-control"
@@ -103,7 +195,8 @@ function NewEstateForm() {
                 </div>
 
                 <div className="col-md-12 mb-3">
-                    <button className="btn btn-primary" type="submit" disabled={status}>Submit</button>
+                    <input type="hidden" name="salt" value={props.salt} />
+                    <button className="btn btn-primary" type="submit" disabled={status}>Create</button>
                 </div>
             </div>
             <Alert variant="primary" show={status === statuses.PROMPTING}>
@@ -119,7 +212,8 @@ function NewEstateForm() {
                     Transaction submitted
                 </Alert.Heading>
                 <p>
-                    Your transaction has been sent and is pending inclusion in the blockchain. You may <LinkEtherscanTx txHash={txHash} chainId="42">follow the transaction on Etherscan.</LinkEtherscanTx>
+                    {/* TODO: Auto select chainID */}
+                    Your transaction has been sent and is pending inclusion in the blockchain. You may <LinkEtherscanTx txHash={txHash} chainId="1">follow the transaction on Etherscan.</LinkEtherscanTx>
                 </p>
             </Alert>
             <Alert variant="success" show={status === statuses.SUCCESS}>
@@ -127,16 +221,29 @@ function NewEstateForm() {
                     Your digital estate has been established on the blockchain!
                 </Alert.Heading>
                 <p>
-                    The smart contract's address is <strong><LinkEtherscanAddress address={estateAddress} chainId="42">{estateAddress}</LinkEtherscanAddress></strong>
+                    The smart contract's address is <strong>{estateAddress}</strong>
+                </p>
+                <p>
+                    <Link to={'/dapp/estate/' + estateAddress} address={estateAddress}>
+                        <Button variant="success" className="btn-raised btn-raised-success m-1 text-capitalize btn-lg">
+                            Access Your New Estate
+                        </Button>
+                    </Link>
                 </p>
             </Alert>
             <Alert variant="danger" show={status === statuses.ERROR}>
                 <Alert.Heading>
                     There was a problem creating the smart contract.
                 </Alert.Heading>
-                <p>
-                    You may be able to find out more information by <LinkEtherscanTx txHash={txHash} chainId="42">investigating the transaction on Etherscan.</LinkEtherscanTx>
-                </p>
+                {txHash ? (
+                    <p>
+                        You may be able to find out more information by <LinkEtherscanTx txHash={txHash} chainId="42">investigating the transaction on Etherscan.</LinkEtherscanTx>
+                    </p>
+                ) : (
+                    <p>
+                        Transaction does not appear to have been submitted to the blockchain.
+                    </p>
+                )}
             </Alert>
 
         </form>
@@ -145,29 +252,85 @@ function NewEstateForm() {
 }
 
 
-class DappNewEstate extends Component {
+function DappNewEstate(props) {
+    const [estates, setEstates] = useState([]);
+    const [nextSalt, setNextSalt] = useState(0);
+    const wallet = useWallet();
+    useEffect(() => {
+        async function fetchData() {
+            console.log(wallet);
+            if(wallet.connected) {
+                let provider = new ethers.providers.Web3Provider(wallet.ethereum);
+                const signer = provider.getSigner(0);
 
-    render() {
-        return (
-            <EthereumDapp>
-                <div>
-                    <Breadcrumb
-                        routeSegments={[
-                            {name: "Home", path: "/"},
-                            {name: "dApp", path: "/dapp"},
-                            {name: "New Estate"}
-                        ]}
-                    ></Breadcrumb>
-                    <SimpleCard title="Create New Estate" className="mb-4">
+                // Bring Out Your Dead (Alfred Estate) Factory
+                let boydFactory = new ethers.Contract(boydFactoryAddress, bringOutYourDeadFactoryAbi, signer);
+
+                // Gnosis Contract Proxy Kit
+                const cpk = await CPK.create({ethers, signer: signer});
+
+                // Check for pre-existing estate deployments
+                let salt = 0;
+                let estatesDetected = [];
+                while(true) {
+                    console.log("Checking for estate with salt nonce: ", salt);
+                    const expectedEstateAddress = await boydFactory.getEstateAddress(cpk.address, salt);
+                    // Check if the estate exists!
+                    let code = await provider.getCode(expectedEstateAddress);
+                    if(code !== '0x') {
+                        estatesDetected.push(expectedEstateAddress);
+                        setEstates(estatesDetected);
+                        salt++;
+                    } else {
+                        break;
+                    }
+                }
+                setNextSalt(salt);
+            }
+        }
+        fetchData();
+    }, [wallet.connected, wallet.account]);
+
+    // TODO: Revisit breadcrumbs flow
+
+    return (
+        <EthereumDapp>
+            <div>
+                <Breadcrumb
+                    routeSegments={[
+                        {name: "Home", path: "/"},
+                        {name: "dApp", path: "/dapp"},
+                        {name: "New Estate"}
+                    ]}
+                ></Breadcrumb>
+                <SimpleCard title="Create New Estate" className="mb-4">
+                    <p>
+                        Submit this form to create your new digital estate on the Ethereum blockchain.  An estate allows you to manage, spend, and invest your assets while planning for the future.
+                    </p>
+                    <p>
+                        A Gnosis Safe will be generated for you and linked to your estate.  Should anything ever happen to you, your estate will handle inheritance according to your wishes.
+                    </p>
+                    <NewEstateForm salt={nextSalt}/>
+                </SimpleCard>
+                {estates.length > 0 && (
+                    <SimpleCard title="Open An Existing Estate" className="mb-4">
                         <p>
-                            Submit this form to create a new estate on the Ethereum blockchain, for managing your digital assets while planning ahead.
+                            Select an estate below to open and manage it:
                         </p>
-                        <NewEstateForm/>
+                        <ol>
+                        {estates.map((estate, index) => (
+                            <li key={index}>
+                                <Link to={'/dapp/estate/' + estate}>
+                                    {estate}
+                                </Link>
+                            </li>
+                        ))}
+                        </ol>
                     </SimpleCard>
-                </div>
-            </EthereumDapp>
-        );
-    }
+                )}
+            </div>
+        </EthereumDapp>
+    );
 }
 
 export default DappNewEstate;
