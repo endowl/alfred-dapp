@@ -288,6 +288,9 @@ function DappEstate(props) {
         let provider = new ethers.providers.Web3Provider(wallet.ethereum);
         const signer = provider.getSigner(0);
         let estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
+
+        // TODO: Track down possible error with executor distributing payments after a beneficiary has claimed shares!
+
         try {
             console.log(event);
             if(address === ethers.constants.AddressZero) {
@@ -958,7 +961,7 @@ function DappEstate(props) {
                     </SimpleCard>
 
                     {/* TODO: Display dead man's switch status but not controls to non-owners */}
-                    {(isOwner || isDeadMansSwitchEnabled) && (
+                    {(liveliness !== 1 && (isOwner || isDeadMansSwitchEnabled)) && (
                         <div className="row">
                             <div className="col-lg-6">
                                 <SimpleCard title="Dead Man's Switch" className="mb-4">
@@ -1145,7 +1148,7 @@ function DappEstate(props) {
                     )}
 
                     {/* Only display this to Executors after Death has been established */}
-                    { (executor === wallet.account && liveliness === 2) && (
+                    { (executor === wallet.account && liveliness === 1) && (
                         <SimpleCard title="Distribute Inheritance to Beneficiaries" className="mb-4">
                             {assets.length === 0 ? (
                                 <div className="loader-bubble loader-bubble-primary m-5" />
@@ -1204,7 +1207,7 @@ function DappEstate(props) {
                     )}
 
                     {/* Only display this to Beneficiaries after Death has been established */}
-                    {(beneficiarySelfShares > 0 && liveliness === 2) && (
+                    {(beneficiarySelfShares > 0 && liveliness === 1) && (
                         <SimpleCard title="Claim My Share of Inheritance" className="mb-4">
                             {inheritance === null ? (
                                 <div className="loader-bubble loader-bubble-primary m-5" />
