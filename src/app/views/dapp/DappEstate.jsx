@@ -927,7 +927,7 @@ function DappEstate(props) {
                                     Alive
                                 </Badge>
                             )}
-                            {(liveliness === 2 || (liveliness === 0 && deadMansSwitchLastCheckin.add(deadMansSwitchCheckinSeconds).lte(blockchainTimestamp)) ) && (
+                            {(liveliness === 2 || (liveliness === 0 && deadMansSwitchLastCheckin.gt(0) && deadMansSwitchLastCheckin.add(deadMansSwitchCheckinSeconds).lte(blockchainTimestamp)) ) && (
                                 <Badge pill variant="warning" className="badge-outline-warning p-2 m-1">
                                     Uncertain
                                 </Badge>

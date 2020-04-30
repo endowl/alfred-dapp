@@ -213,7 +213,7 @@ function NewEstateForm(props) {
                 </Alert.Heading>
                 <p>
                     {/* TODO: Auto select chainID */}
-                    Your transaction has been sent and is pending inclusion in the blockchain. You may <LinkEtherscanTx txHash={txHash} chainId="1">follow the transaction on Etherscan.</LinkEtherscanTx>
+                    Your transaction has been sent and is pending inclusion in the blockchain. You may <LinkEtherscanTx txHash={txHash} chainId="42">follow the transaction on Etherscan.</LinkEtherscanTx>
                 </p>
             </Alert>
             <Alert variant="success" show={status === statuses.SUCCESS}>
