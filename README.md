@@ -4,7 +4,7 @@ Alfred is a decentralized crypto inheritance solution.
 
 Missing or stolen private keys have already caused the loss of millions of dollars worth of digital assets. As more and more individuals embrace the ideals of decentralization, a pivotal question remains: “what happens to my digital assets when I can’t access them anymore?”
 
-Website: http://alpha.alfred.estate/
+Website: https://alpha.alfred.estate/
 
 Demo: https://youtu.be/855X8umwjl8
 
