@@ -14,6 +14,7 @@ import localStorageService from "../../services/localStorageService";
 import PieChart from "./PieChart";
 // import bringOutYourDeadFactoryAbi from "../../../abi/bringOutYourDeadFactoryAbi";
 import {NotificationManager} from "react-notifications";
+import moment from "moment";
 
 // Gnosis Proxy Kit
 const CPK = require('contract-proxy-kit');
@@ -117,6 +118,7 @@ function DappEstate(props) {
     const [isDeadMansSwitchFormEnabled, setIsDeadMansSwitchFormEnabled] = useState(false);
     // const [deadMansSwitchFormCheckinSeconds, setDeadMansSwitchFormCheckinSeconds] = useState(0);
     const [deadMansSwitchFormCheckinMinutes, setDeadMansSwitchFormCheckinMinutes] = useState(0);
+    const [blockchainTimestamp, setBlockchainTimestamp] = useState(ethers.utils.bigNumberify(0));
 
     async function handleUpdateGnosisSafeRecovery(event) {
         event.preventDefault();
@@ -523,18 +525,45 @@ function DappEstate(props) {
     }
 
 
+    async function handleBringOutYourDead(event) {
+        event.preventDefault();
+        const provider = new ethers.providers.Web3Provider(wallet.ethereum);
+        const signer = provider.getSigner(0);
+        const estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
+
+        try {
+            await estateContract.bringOutYourDead();
+            // Listen for event and then refresh
+            estateContract.on("ConfirmationOfDeath", async (event) => {
+                console.log('ConfirmationOfDeath');
+                NotificationManager.success(
+                    "We are sorry for your loss.",
+                    "Condolences"
+                );
+                // Update liveliness
+                setLiveliness(await estateContract.liveliness());
+            });
+        } catch (e) {
+            console.log("ERROR while calling bringOutYourDead", e);
+            NotificationManager.error(
+                "There was a problem submitting confirmation of death.",
+                "Error sending transaction"
+            );
+        }
+    }
+
+
     async function handleImNotDeadYet(event) {
         event.preventDefault();
         const provider = new ethers.providers.Web3Provider(wallet.ethereum);
         const signer = provider.getSigner(0);
         const estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
 
-
         try {
             await estateContract.imNotDeadYet();
             // Listen for event and then refresh
-            estateContract.on("AddedBeneficiary", async (event) => {
-                console.log('Beneficiary added');
+            estateContract.on("ConfirmationOfLife", async (event) => {
+                console.log('ConfirmationOfLife');
                 NotificationManager.success(
                     "Check-in successful, dead man's switch countdown restarted.",
                     "Success"
@@ -549,10 +578,7 @@ function DappEstate(props) {
                 "Error sending transaction"
             );
         }
-
-
     }
-
 
 
     async function refreshBeneficiaries() {
@@ -761,17 +787,33 @@ function DappEstate(props) {
                 }
             }
 
-            // TODO: Load Dead Man's Switch settings from estate
+            // Load Dead Man's Switch settings from estate
             const dmsEnabed = await estateContract.isDeadMansSwitchEnabled();
             setIsDeadMansSwitchEnabled(dmsEnabed);
             setIsDeadMansSwitchFormEnabled(dmsEnabed);
 
             const dmsCheckinSeconds = await estateContract.deadMansSwitchCheckinSeconds();
             setDeadMansSwitchCheckinSeconds(dmsCheckinSeconds);
-            setDeadMansSwitchFormCheckinMinutes(dmsCheckinSeconds.mul(60));
+            setDeadMansSwitchFormCheckinMinutes(dmsCheckinSeconds.div(60));
 
             const dmsLastCheckin = await estateContract.deadMansSwitchLastCheckin();
             setDeadMansSwitchLastCheckin(dmsLastCheckin);
+
+            // Determine current on-chain timestamp for comparing to dead man's switch
+            const block = await provider.getBlock();
+            const blockTimestamp = ethers.utils.bigNumberify(block.timestamp);
+
+            setBlockchainTimestamp(blockTimestamp);
+
+            // if(dmsLastCheckin.gt(0)) {
+            //     let timePassed = moment.unix(dmsLastCheckin.toNumber()).from(moment.unix(blockTimestamp.toNumber()));
+            //     console.log("timePassed: ", timePassed);
+            //     console.log("blockTimestamp: ", blockTimestamp);
+            //     console.log("dmsLastCheckin: ", dmsLastCheckin.toNumber());
+            //     console.log("moment(blockTimestamp): ", moment.unix(blockTimestamp.toNumber()));
+            //     console.log("moment(dmsLastCheckin): ", moment.unix(dmsLastCheckin.toNumber()));
+            //     // TODO: Update timePassed
+            // }
 
             // Load beneficiary details
             refreshBeneficiaries();
@@ -877,12 +919,12 @@ function DappEstate(props) {
                         </div>
                         <div>
                             Life Signs:
-                            {liveliness === 0 && (
+                            {(liveliness === 0 && deadMansSwitchLastCheckin.add(deadMansSwitchCheckinSeconds).gt(blockchainTimestamp)) && (
                                 <Badge pill variant="success" className="badge-outline-success p-2 m-1">
                                     Alive
                                 </Badge>
                             )}
-                            {liveliness === 2 && (
+                            {(liveliness === 2 || (liveliness === 0 && deadMansSwitchLastCheckin.add(deadMansSwitchCheckinSeconds).lte(blockchainTimestamp)) ) && (
                                 <Badge pill variant="warning" className="badge-outline-warning p-2 m-1">
                                     Uncertain
                                 </Badge>
@@ -916,39 +958,41 @@ function DappEstate(props) {
                     </SimpleCard>
 
                     {/* TODO: Display dead man's switch status but not controls to non-owners */}
-                    {isOwner && (
+                    {(isOwner || isDeadMansSwitchEnabled) && (
                         <div className="row">
                             <div className="col-lg-6">
                                 <SimpleCard title="Dead Man's Switch" className="mb-4">
-                                    <Form onSubmit={handleUpdateDeadMansSwitch}>
-                                        <Form.Check
-                                            type="switch"
-                                            id="deadManEnabled"
-                                            label="Enabled"
-                                            checked={isDeadMansSwitchFormEnabled}
-                                            onChange={(event) => setIsDeadMansSwitchFormEnabled(event.target.checked)}
-                                        />
-                                        <div className="form-group mb-3">
-                                            <label htmlFor="deadManCheckInDays">
-                                                Maximum number of <em title="Check-in period step size will be changed from 'minutes' to 'days' in the dApp after alpha">minutes</em> between Check-ins:
-                                            </label>
-                                            {/* TODO: Change check-in period step size from minutes to days after alpha*/}
-                                            <input
-                                                className="form-control"
-                                                id="deadManCheckInDays"
-                                                placeholder="Check-in period in minutes"
-                                                value={deadMansSwitchFormCheckinMinutes}
-                                                onChange={(event) => setDeadMansSwitchFormCheckinMinutes(event.target.value)}
+                                    {isOwner && (
+                                        <Form onSubmit={handleUpdateDeadMansSwitch}>
+                                            <Form.Check
+                                                type="switch"
+                                                id="deadManEnabled"
+                                                label="Enabled"
+                                                checked={isDeadMansSwitchFormEnabled}
+                                                onChange={(event) => setIsDeadMansSwitchFormEnabled(event.target.checked)}
                                             />
-                                        </div>
-                                        <div className="mb-3">
-                                            <Button type="submit" variant="primary">
-                                                Update
-                                            </Button>
-                                        </div>
-                                    </Form>
+                                            <div className="form-group mb-3">
+                                                <label htmlFor="deadManCheckInDays">
+                                                    Maximum number of <em title="Check-in period step size will be changed from 'minutes' to 'days' in the dApp after alpha">minutes</em> between Check-ins:
+                                                </label>
+                                                {/* TODO: Change check-in period step size from minutes to days after alpha*/}
+                                                <input
+                                                    className="form-control"
+                                                    id="deadManCheckInDays"
+                                                    placeholder="Check-in period in minutes"
+                                                    value={deadMansSwitchFormCheckinMinutes}
+                                                    onChange={(event) => setDeadMansSwitchFormCheckinMinutes(event.target.value)}
+                                                />
+                                            </div>
+                                            <div className="mb-3">
+                                                <Button type="submit" variant="primary">
+                                                    Update
+                                                </Button>
+                                            </div>
+                                        </Form>
+                                    )}
                                     <div className="row">
-                                        <div className="col-lg-6 col-md-12 col-sm-12">
+                                        <div className="col-lg-12 col-md-12 col-sm-12">
                                             <div className="card card-icon-bg card-icon-bg-primary o-hidden mb-4">
                                                 <div className="card-body text-center">
                                                     <i className="i-Stopwatch"/>
@@ -960,8 +1004,9 @@ function DappEstate(props) {
                                                             {deadMansSwitchLastCheckin.eq(0) ? (
                                                                 <span>Never</span>
                                                             ) : (
-                                                                <span>{deadMansSwitchLastCheckin.toString()}&nbsp;minutes</span>
-
+                                                                <span>
+                                                                    {moment.unix(deadMansSwitchLastCheckin.toNumber()).from(moment.unix(blockchainTimestamp.toNumber()))}
+                                                                </span>
                                                             )}
                                                         </p>
                                                     </div>
@@ -969,64 +1014,85 @@ function DappEstate(props) {
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="row">
-                                        <div className="col-lg-6 col-md-12 col-sm-12">
-                                            <Button
-                                                key="primary"
-                                                // variant="primary"
-                                                variant="success"
-                                                size="lg"
-                                                className="m-1 mb-4 text-capitalize d-block w-100 my-2"
-                                                onClick={handleImNotDeadYet}
-                                            >
-                                                I'm Alive - Check-in Now!
-                                            </Button>
+                                    {isOwner && (
+                                        <div className="row">
+                                            <div className="col-lg-12 col-md-12 col-sm-12">
+                                                <Button
+                                                    key="primary"
+                                                    // variant="primary"
+                                                    variant="success"
+                                                    size="lg"
+                                                    className="m-1 mb-4 text-capitalize d-block w-100 my-2"
+                                                    onClick={handleImNotDeadYet}
+                                                >
+                                                    I'm Alive - Check-in Now!
+                                                </Button>
+                                            </div>
                                         </div>
-                                    </div>
-                                </SimpleCard>
-                            </div>
-                            <div className="col-lg-6">
-                                <SimpleCard title="Gnosis Safe Estate Recovery Module" className="mb-4">
-                                    <Form onSubmit={handleUpdateGnosisSafeRecovery}>
-                                        <div className="mb-3">
-                                            <Form.Check
-                                                type="switch"
-                                                id="gnosisSafeRecoveryEnabled"
-                                                label="Enabled"
-                                                checked={gnosisRecoveryFormEnabled}
-                                                onChange={(event) => setGnosisRecoveryFormEnabled(event.target.checked)}
-                                            />
-                                        </div>
-                                        <div className="form-group mb-1">
-                                            <label>Parties required to recover gnosis safe:</label>
-                                            <Form.Check
-                                                type="switch"
-                                                id="gnosisSafeRecoveryExecutor"
-                                                label="Executor"
-                                                checked={gnosisRecoveryFormExecutor}
-                                                onChange={(event) => setGnosisRecoveryFormExecutor(event.target.checked)}
-                                            />
+                                    )}
+                                    {/* Display when owner is alive but past due to check in to dead man switch and user is executor or beneficiary */}
+                                    {(liveliness === 0 && deadMansSwitchLastCheckin.add(deadMansSwitchCheckinSeconds).lte(blockchainTimestamp) && (executor === wallet.account || beneficiarySelfShares > 0)) && (
+                                        <div className="row">
+                                            <div className="col-lg-12 col-md-12 col-sm-12">
+                                                <Button
+                                                    key="primary"
+                                                    variant="danger"
+                                                    size="lg"
+                                                    className="m-1 mb-4 text-capitalize d-block w-100 my-2"
+                                                    onClick={handleBringOutYourDead}
+                                                >
+                                                    Report Owner as Deceased
+                                                </Button>
+                                            </div>
                                         </div>
 
-                                        <div className="form-group mb-3">
-                                            <label htmlFor="gnosisSafeRecoveryMinBeneficiaries">Beneficiaries, minimum number:</label>
-                                            <input
-                                                className="form-control"
-                                                id="gnosisSafeRecoveryMinBeneficiaries"
-                                                placeholder=""
-                                                type="number"
-                                                min="1"
-                                                step="1"
-                                                value={gnosisRecoveryFormMinBeneficiaries}
-                                                onChange={(event) => setGnosisRecoveryFormMinBeneficiaries(event.target.value)}
-                                            />
-                                        </div>
-                                        <button type="submit" className="btn btn-primary">
-                                            Update
-                                        </button>
-                                    </Form>
+                                    )}
                                 </SimpleCard>
                             </div>
+                            {isOwner && (
+                                <div className="col-lg-6">
+                                    <SimpleCard title="Gnosis Safe Estate Recovery Module" className="mb-4">
+                                        <Form onSubmit={handleUpdateGnosisSafeRecovery}>
+                                            <div className="mb-3">
+                                                <Form.Check
+                                                    type="switch"
+                                                    id="gnosisSafeRecoveryEnabled"
+                                                    label="Enabled"
+                                                    checked={gnosisRecoveryFormEnabled}
+                                                    onChange={(event) => setGnosisRecoveryFormEnabled(event.target.checked)}
+                                                />
+                                            </div>
+                                            <div className="form-group mb-1">
+                                                <label>Parties required to recover gnosis safe:</label>
+                                                <Form.Check
+                                                    type="switch"
+                                                    id="gnosisSafeRecoveryExecutor"
+                                                    label="Executor"
+                                                    checked={gnosisRecoveryFormExecutor}
+                                                    onChange={(event) => setGnosisRecoveryFormExecutor(event.target.checked)}
+                                                />
+                                            </div>
+
+                                            <div className="form-group mb-3">
+                                                <label htmlFor="gnosisSafeRecoveryMinBeneficiaries">Beneficiaries, minimum number:</label>
+                                                <input
+                                                    className="form-control"
+                                                    id="gnosisSafeRecoveryMinBeneficiaries"
+                                                    placeholder=""
+                                                    type="number"
+                                                    min="1"
+                                                    step="1"
+                                                    value={gnosisRecoveryFormMinBeneficiaries}
+                                                    onChange={(event) => setGnosisRecoveryFormMinBeneficiaries(event.target.value)}
+                                                />
+                                            </div>
+                                            <button type="submit" className="btn btn-primary">
+                                                Update
+                                            </button>
+                                        </Form>
+                                    </SimpleCard>
+                                </div>
+                            )}
                         </div>
                     )}
 
