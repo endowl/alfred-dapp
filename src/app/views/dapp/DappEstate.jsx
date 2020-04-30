@@ -171,15 +171,25 @@ function DappEstate(props) {
         // Listen for events and update accordingly
         const safe = new ethers.Contract(gnosisSafe, gnosisModuleManagerAbi, signer);
         safe.on("EnabledModule", async (event) => {
+            setIsGnosisSafeRecoveryEnabled(true);
             console.log("Module enabled");
             NotificationManager.success(
                 "The Estate Recovery Module has been enabled on your Gnosis Safe",
                 "Module Enabled"
             );
         });
+        safe.on("DisabledModule", async (event) => {
+            setIsGnosisSafeRecoveryEnabled(false);
+            console.log("Module disabled");
+            NotificationManager.success(
+                "The Estate Recovery Module has been disabled on your Gnosis Safe",
+                "Module Disabled"
+            );
+        });
 
         let estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
         estateContract.on("BeneficiariesRequiredForSafeRecoveryChanged", async (newValue, event) => {
+            setGnosisSafeRecoveryMinimumBeneficiaries(newValue);
             console.log("Beneficiaries required updated: ", newValue);
             NotificationManager.success(
                 "The number of beneficiaries required to recovery your Gnosis Safe has been updated.",
@@ -187,6 +197,7 @@ function DappEstate(props) {
             );
         });
         estateContract.on("IsExecutorRequiredForSafeRecoveryChanged", async (newValue, event) => {
+            setIsGnosisSafeRecoveryExecutor(newValue);
             console.log("Is executor required updated: ", newValue);
             NotificationManager.success(
                 "The executor requirement for recovering your Gnosis Safe has been updated.",
@@ -238,6 +249,7 @@ function DappEstate(props) {
         // Listen for events and update accordingly
         let estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
         estateContract.on("DeadMansSwitchCheckinSecondsChanged", async (newValue, event) => {
+            setDeadMansSwitchCheckinSeconds(newValue);
             console.log("DeadMansSwitchCheckinSecondsChanged: ", newValue);
             NotificationManager.success(
                 "The dead man's switch check-in period has been updated.",
@@ -245,6 +257,7 @@ function DappEstate(props) {
             );
         });
         estateContract.on("IsDeadMansSwitchEnabledChanged", async (newValue, event) => {
+            setIsDeadMansSwitchEnabled(newValue);
             console.log("IsDeadMansSwitchEnabledChanged: ", newValue);
             const status = newValue ? 'enabled' : 'disabled';
             NotificationManager.success(
@@ -291,8 +304,7 @@ function DappEstate(props) {
                     "Distributed asset to beneficiary",
                     "Asset distributed"
                 );
-
-                // TODO: Refresh asset balances
+                refreshAssets()
             })
         } catch (e) {
             console.log("ERROR while waiting for asset distribution transaction to complete", e);
@@ -331,8 +343,7 @@ function DappEstate(props) {
                         "Asset Claimed"
                     );
                 }
-
-                // TODO: Refresh asset balances
+                refreshAssets();
             })
         } catch (e) {
             console.log("ERROR while waiting for inheritance claim transaction to complete", e);
@@ -365,10 +376,12 @@ function DappEstate(props) {
                 );
                 refreshBeneficiaries();
             });
-
-
         } catch (e) {
             console.log("ERROR while waiting for addBeneficiary transaction to complete", e);
+            NotificationManager.error(
+                "There was a problem addint the beneficiary.",
+                "Error sending transaction"
+            );
         }
     }
 
@@ -430,7 +443,7 @@ function DappEstate(props) {
                     "Estate and Gnosis Safe have been successfully recovered to new wallet",
                     "Recovery Successful"
                 );
-                // TODO: Refresh owner parameter???? (premature, gnosis safe chagned ownership, but not estate)
+                // TODO: Refresh estate owner? No, that's premature, gnosis safe has chagned ownership, but not estate yet
             });
 
             try {
@@ -510,6 +523,38 @@ function DappEstate(props) {
     }
 
 
+    async function handleImNotDeadYet(event) {
+        event.preventDefault();
+        const provider = new ethers.providers.Web3Provider(wallet.ethereum);
+        const signer = provider.getSigner(0);
+        const estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
+
+
+        try {
+            await estateContract.imNotDeadYet();
+            // Listen for event and then refresh
+            estateContract.on("AddedBeneficiary", async (event) => {
+                console.log('Beneficiary added');
+                NotificationManager.success(
+                    "Check-in successful, dead man's switch countdown restarted.",
+                    "Success"
+                );
+                // Update time since last check-in
+                setDeadMansSwitchLastCheckin(await estateContract.deadMansSwitchLastCheckin());
+            });
+        } catch (e) {
+            console.log("ERROR while checking in", e);
+            NotificationManager.error(
+                "There was a problem checking-in with the dead man's switch.",
+                "Error sending transaction"
+            );
+        }
+
+
+    }
+
+
+
     async function refreshBeneficiaries() {
         const provider = new ethers.providers.Web3Provider(wallet.ethereum);
         const signer = provider.getSigner(0);
@@ -542,6 +587,111 @@ function DappEstate(props) {
         // setBeneficiaryTotalShares(_totalBeneficiaryShares);
         console.log(bs);
     }
+
+    async function refreshAssets(_beneficiarySelfShares) {
+        const provider = new ethers.providers.Web3Provider(wallet.ethereum);
+        const signer = provider.getSigner(0);
+        let estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
+        // Determine tracked assets
+        let _trackedTokens = [];
+        let assetAddress = null;
+        do {
+            try {
+                assetAddress = await estateContract.trackedTokens(_trackedTokens.length);
+                _trackedTokens.push(assetAddress);
+            } catch (e) {
+                assetAddress = null
+            }
+        } while (assetAddress !== null);
+
+        // Track some tokens automatically
+        let defaultTokens = [
+            "0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa",  // KOVAN Dai
+            "0x6B175474E89094C44Da98b954EedeAC495271d0F",  // Mainnet Dai
+            "0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643",  // Mainnet Compound Dai
+            "0x61eB5a373c4Ec78523602583c049d8563d2C7BCD",  // KOKAN Chainlink
+        ];
+
+        for (let i = 0; i < defaultTokens.length; i++) {
+            if (!_trackedTokens.includes(defaultTokens[i])) {
+                _trackedTokens.push(defaultTokens[i]);
+            }
+
+        }
+        setTrackedTokens(_trackedTokens);
+
+        // Load assets
+        let _assets = [];
+        let _inheritance = [];
+
+        // Get ETH balance
+        try {
+            let wei = await provider.getBalance(estateAddress);
+            let asset = {
+                symbol: 'ETH',
+                name: 'Ether',
+                address: ethers.constants.AddressZero,
+                decimals: 18,
+                balance: ethers.utils.formatEther(wei),
+            };
+            _assets.push(asset);
+            // Track personal shares if a beneficiary
+            if (_beneficiarySelfShares.toNumber() > 0) {
+                let beneficiaryBalance = await estateContract.getBeneficiaryBalance(wallet.account, ethers.constants.AddressZero);
+                let inheritAsset = {
+                    symbol: asset['symbol'],
+                    name: asset['name'],
+                    address: asset['address'],
+                    decimals: asset['decimals'],
+                    // balance: (asset['balance'] * shareRatio).toFixed(4),
+                    balance: ethers.utils.formatEther(beneficiaryBalance),
+                };
+                _inheritance.push(inheritAsset);
+            }
+        } catch (e) {
+            console.log("Failed retrieving asset balances");
+        }
+
+        // Get balances of all tracked ERC20 tokens
+        let erc20Contract;
+        for (let i = 0; i < _trackedTokens.length; i++) {
+            console.log("Attempting to load details for asset #" + i + ": " + _trackedTokens[i]);
+            try {
+                erc20Contract = new ethers.Contract(_trackedTokens[i], erc20Abi, signer);
+                let decimals = await erc20Contract.decimals();
+                let wei = await erc20Contract.balanceOf(estateAddress);
+                let asset = {
+                    symbol: await erc20Contract.symbol(),
+                    name: await erc20Contract.name(),
+                    address: _trackedTokens[i],
+                    decimals: decimals,
+                    balance: ethers.utils.formatUnits(wei, decimals),
+                };
+                _assets.push(asset);
+                console.log("Asset: ", asset);
+                console.log("Wei: ", wei);
+                // Track personal shares if a beneficiary
+                if (_beneficiarySelfShares.toNumber() > 0) {
+                    let beneficiaryBalance = await estateContract.getBeneficiaryBalance(wallet.account, asset['address']);
+                    let inheritAsset = {
+                        symbol: asset['symbol'],
+                        name: asset['name'],
+                        address: asset['address'],
+                        decimals: asset['decimals'],
+                        // balance: (asset['balance'] * shareRatio).toFixed(4),
+                        balance: ethers.utils.formatUnits(beneficiaryBalance, decimals),
+                    };
+                    console.log("InheritAsset: ", inheritAsset);
+                    _inheritance.push(inheritAsset);
+                }
+            } catch (e) {
+                console.log("Failed loading asset #" + i);
+            }
+        }
+        setAssets(_assets);
+        setInheritance(_inheritance);
+    }
+
 
     useEffect(() => {
         async function fetchData() {
@@ -641,105 +791,8 @@ function DappEstate(props) {
                 shareRatio = _beneficiarySelfShares / _beneficiaryTotalShares;
             }
             console.log("ShareRatio: ", shareRatio);
-
-            // Determine tracked assets
-            let _trackedTokens = [];
-            let assetAddress = null;
-            do {
-                try {
-                    assetAddress = await estateContract.trackedTokens(_trackedTokens.length);
-                    _trackedTokens.push(assetAddress);
-                } catch (e) {
-                    assetAddress = null
-                }
-            } while (assetAddress !== null);
-
-            // Track some tokens automatically
-            let defaultTokens = [
-                "0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa",  // KOVAN Dai
-                "0x6B175474E89094C44Da98b954EedeAC495271d0F",  // Mainnet Dai
-                "0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643",  // Mainnet Compound Dai
-                "0x61eB5a373c4Ec78523602583c049d8563d2C7BCD",  // KOKAN Chainlink
-            ];
-
-            for (let i = 0; i < defaultTokens.length; i++) {
-                if(!_trackedTokens.includes(defaultTokens[i])) {
-                    _trackedTokens.push(defaultTokens[i]);
-                }
-
-            }
-            setTrackedTokens(_trackedTokens);
-
-            // Load assets
-            let _assets = [];
-            let _inheritance = [];
-
-            // Get ETH balance
-            try {
-                let wei = await provider.getBalance(estateAddress);
-                let asset = {
-                    symbol: 'ETH',
-                    name: 'Ether',
-                    address: ethers.constants.AddressZero,
-                    decimals: 18,
-                    balance: ethers.utils.formatEther(wei),
-                };
-                _assets.push(asset);
-                // Track personal shares if a beneficiary
-                if (_beneficiarySelfShares.toNumber() > 0) {
-                    let beneficiaryBalance = await estateContract.getBeneficiaryBalance(wallet.account, ethers.constants.AddressZero);
-                    let inheritAsset = {
-                        symbol: asset['symbol'],
-                        name: asset['name'],
-                        address: asset['address'],
-                        decimals: asset['decimals'],
-                        // balance: (asset['balance'] * shareRatio).toFixed(4),
-                        balance: ethers.utils.formatEther(beneficiaryBalance),
-                    };
-                    _inheritance.push(inheritAsset);
-                }
-            } catch (e) {
-                console.log("Failed retrieving asset balances");
-            }
-
-            // Get balances of all tracked ERC20 tokens
-            let erc20Contract;
-            for (let i = 0; i < _trackedTokens.length; i++) {
-                console.log("Attempting to load details for asset #" + i + ": " + _trackedTokens[i]);
-                try {
-                    erc20Contract = new ethers.Contract(_trackedTokens[i], erc20Abi, signer);
-                    let decimals = await erc20Contract.decimals();
-                    let wei = await erc20Contract.balanceOf(estateAddress);
-                    let asset = {
-                        symbol: await erc20Contract.symbol(),
-                        name: await erc20Contract.name(),
-                        address: _trackedTokens[i],
-                        decimals: decimals,
-                        balance: ethers.utils.formatUnits(wei, decimals),
-                    };
-                    _assets.push(asset);
-                    console.log("Asset: ", asset);
-                    console.log("Wei: ", wei);
-                    // Track personal shares if a beneficiary
-                    if (_beneficiarySelfShares.toNumber() > 0) {
-                        let beneficiaryBalance = await estateContract.getBeneficiaryBalance(wallet.account, asset['address']);
-                        let inheritAsset = {
-                            symbol: asset['symbol'],
-                            name: asset['name'],
-                            address: asset['address'],
-                            decimals: asset['decimals'],
-                            // balance: (asset['balance'] * shareRatio).toFixed(4),
-                            balance: ethers.utils.formatUnits(beneficiaryBalance, decimals),
-                        };
-                        console.log("InheritAsset: ", inheritAsset);
-                        _inheritance.push(inheritAsset);
-                    }
-                } catch (e) {
-                    console.log("Failed loading asset #" + i);
-                }
-            }
-            setAssets(_assets);
-            setInheritance(_inheritance);
+            
+            refreshAssets(_beneficiarySelfShares);
         }
 
         if (wallet.connected) {
@@ -924,7 +977,7 @@ function DappEstate(props) {
                                                 variant="success"
                                                 size="lg"
                                                 className="m-1 mb-4 text-capitalize d-block w-100 my-2"
-                                                onClick={() => setShowTodo(true)}
+                                                onClick={handleImNotDeadYet}
                                             >
                                                 I'm Alive - Check-in Now!
                                             </Button>
