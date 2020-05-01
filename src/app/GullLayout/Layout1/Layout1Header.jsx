@@ -17,6 +17,7 @@ import { withRouter } from "react-router-dom";
 import { merge } from "lodash";
 import MegaMenu from "@gull/components/MegaMenu";
 import {useWallet} from "use-wallet";
+import localStorageService from "../../services/localStorageService";
 
 function WalletConnection() {
     const wallet = useWallet();
@@ -24,47 +25,65 @@ function WalletConnection() {
         <>
 
             {wallet.connected ? (
-            <Dropdown>
-              <DropdownToggle as="span" className="toggle-hidden cursor-pointer">
-                <img
-                    src="/assets/images/faces/3.jpg"
-                    id="userDropdown"
-                    alt=""
-                    data-toggle="dropdown"
-                    aria-haspopup="true"
-                    aria-expanded="false"
-                />
-              </DropdownToggle>
-              <DropdownMenu>
-                <div className="dropdown-header">
-                  <i className="i-Lock-User mr-1"></i> {wallet.account}
-                </div>
-                <button className="dropdown-item cursor-pointer" onClick={() => wallet.deactivate()}>
-                  Disconnect
-                </button>
-              </DropdownMenu>
-            </Dropdown>
+                <Dropdown>
+                    <DropdownToggle as="span" className="toggle-hidden cursor-pointer">
+                        <img
+                            src="/assets/images/faces/3.jpg"
+                            id="userDropdown"
+                            alt=""
+                            data-toggle="dropdown"
+                            aria-haspopup="true"
+                            aria-expanded="false"
+                        />
+                    </DropdownToggle>
+                    <DropdownMenu>
+                        <div className="dropdown-header">
+                            <i className="i-Lock-User mr-1"></i> {wallet.account}
+                        </div>
+                        <button className="dropdown-item cursor-pointer" onClick={() => {
+                            wallet.deactivate();
+                            localStorageService.setItem('connectWallet', false);
+                        }}>
+                            Disconnect
+                        </button>
+                    </DropdownMenu>
+                </Dropdown>
             ) : (
-            <Dropdown>
-              <DropdownToggle as="span" className="toggle-hidden cursor-pointer">
-                <img
-                    src="/assets/images/faces/3.jpg"
-                    id="userDropdown"
-                    alt=""
-                    data-toggle="dropdown"
-                    aria-haspopup="true"
-                    aria-expanded="false"
-                />
-              </DropdownToggle>
-              <DropdownMenu>
-                <div className="dropdown-header">
-                  <i className="i-Lock-User mr-1"></i> Not connected
-                </div>
-                <button className="dropdown-item cursor-pointer" onClick={() => wallet.activate()}>MetaMask</button>
-                <button className="dropdown-item cursor-pointer" onClick={() => wallet.activate('frame')}>Frame</button>
-                <button className="dropdown-item cursor-pointer" onClick={() => wallet.activate('portis')}>Portis</button>
-              </DropdownMenu>
-            </Dropdown>
+                <Dropdown>
+                    <DropdownToggle as="span" className="toggle-hidden cursor-pointer">
+                        <img
+                            src="/assets/images/faces/3.jpg"
+                            id="userDropdown"
+                            alt=""
+                            data-toggle="dropdown"
+                            aria-haspopup="true"
+                            aria-expanded="false"
+                        />
+                    </DropdownToggle>
+                    <DropdownMenu>
+                        <div className="dropdown-header">
+                            <i className="i-Lock-User mr-1"></i> Not connected
+                        </div>
+                        <button className="dropdown-item cursor-pointer" onClick={() => {
+                            wallet.activate();
+                            localStorageService.setItem('connectWallet', true);
+                            localStorageService.setItem('walletProvider', null);
+                        }}>MetaMask
+                        </button>
+                        <button className="dropdown-item cursor-pointer" onClick={() => {
+                            wallet.activate('frame');
+                            localStorageService.setItem('connectWallet', true);
+                            localStorageService.setItem('walletProvider', 'frame');
+                        }}>Frame
+                        </button>
+                        <button className="dropdown-item cursor-pointer" onClick={() => {
+                            wallet.activate('portis');
+                            localStorageService.setItem('connectWallet', true);
+                            localStorageService.setItem('walletProvider', 'portis');
+                        }}>Portis
+                        </button>
+                    </DropdownMenu>
+                </Dropdown>
             )}
 
         </>

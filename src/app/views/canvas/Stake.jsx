@@ -5,6 +5,7 @@ import StakingModal from "./StakingModal";
 import {redeem} from "./utils/redeem";
 import SimpleCard from "../../../@gull/components/cards/SimpleCard";
 import {NotificationContainer} from "react-notifications";
+import EthereumDapp from "../dapp/EthereumDapp";
 
 class Stake extends Component {
     constructor(props) {
@@ -68,82 +69,84 @@ class Stake extends Component {
         // this.getStreaming();
 
         return (
-            <Fragment>
-                <NotificationContainer/>
-                <SimpleCard title="Stake with rDAI and Donate Interest">
-                    <div className="mb-4">
-                        Put your money to work passively. Stake Dai through rDai to help fund Alfred.Estate's DeFi development efforts:
-                    </div>
-                    <div>
-                        {stakeDai.map((card, index) => (
-                            <Fragment>
-                                <div className="row">
-                                    <div className="cursor-pointer col-lg-3 col-md-6 col-sm-6"
-                                         onClick={(e) => this.setState({modal: !this.state.modal})}>
-                                        <div className="card card-icon-bg card-icon-bg-primary o-hidden mb-4">
-                                            <div className="card-body text-center"><i className={card.leftIcon}></i>
-                                                <div className="content"><p
-                                                    className="text-muted mt-2 mb-0 text-capitalize">{card.leftSubtitle}</p>
-                                                    <p
-                                                        className="lead text-primary text-24 mb-2 text-capitalize">{this.state.stake && this.state.stake}&nbsp;Dai</p>
+            <EthereumDapp>
+                <Fragment>
+                    <NotificationContainer/>
+                    <SimpleCard title="Stake with rDAI and Donate Interest">
+                        <div className="mb-4">
+                            Put your money to work passively. Stake Dai through rDai to help fund Alfred.Estate's DeFi development efforts:
+                        </div>
+                        <div>
+                            {stakeDai.map((card, index) => (
+                                <Fragment>
+                                    <div className="row">
+                                        <div className="cursor-pointer col-lg-3 col-md-6 col-sm-6"
+                                             onClick={(e) => this.setState({modal: !this.state.modal})}>
+                                            <div className="card card-icon-bg card-icon-bg-primary o-hidden mb-4">
+                                                <div className="card-body text-center"><i className={card.leftIcon}></i>
+                                                    <div className="content"><p
+                                                        className="text-muted mt-2 mb-0 text-capitalize">{card.leftSubtitle}</p>
+                                                        <p
+                                                            className="lead text-primary text-24 mb-2 text-capitalize">{this.state.stake && this.state.stake}&nbsp;Dai</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="col-lg-3 col-md-6 col-sm-6">
+                                            <div className="card card-icon-bg card-icon-bg-primary o-hidden mb-4">
+                                                <div className="card-body text-center"><i className={card.rightIcon}></i>
+                                                    <div className="content"><p
+                                                        className="text-muted mt-2 mb-0 text-capitalize">{card.rightSubtitle}</p>
+                                                        <p
+                                                            className="lead text-primary text-24 mb-2 text-capitalize">{this.state.rate && this.state.rate}</p>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="col-lg-3 col-md-6 col-sm-6">
-                                        <div className="card card-icon-bg card-icon-bg-primary o-hidden mb-4">
-                                            <div className="card-body text-center"><i className={card.rightIcon}></i>
-                                                <div className="content"><p
-                                                    className="text-muted mt-2 mb-0 text-capitalize">{card.rightSubtitle}</p>
-                                                    <p
-                                                        className="lead text-primary text-24 mb-2 text-capitalize">{this.state.rate && this.state.rate}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
 
-                                {/*<div key={index} className="col-lg-6 col-md-6 col-sm-6" style={{display: "flex", height: "76px"}}>*/}
-                                {/*  <div className="card o-hidden" style={{display: "flex", flexDirection: "row"}}>*/}
+                                    {/*<div key={index} className="col-lg-6 col-md-6 col-sm-6" style={{display: "flex", height: "76px"}}>*/}
+                                    {/*  <div className="card o-hidden" style={{display: "flex", flexDirection: "row"}}>*/}
 
-                                {/*    <button className="card-body text-center" style={{padding: "4px"}}*/}
-                                {/*            onClick={(e) => this.setState({modal: !this.state.modal})}>*/}
-                                {/*      <i className={card.leftIcon}></i>*/}
-                                {/*      <div>*/}
-                                {/*        <p className="text-muted text-capitalize" style={{marginBottom: "0px"}}>*/}
-                                {/*          {card.leftSubtitle}*/}
-                                {/*        </p>*/}
-                                {/*        <p className="lead text-primary text-capitalize">*/}
-                                {/*          {this.state.stake && this.state.stake}*/}
-                                {/*        </p>*/}
-                                {/*      </div>*/}
-                                {/*    </button>*/}
+                                    {/*    <button className="card-body text-center" style={{padding: "4px"}}*/}
+                                    {/*            onClick={(e) => this.setState({modal: !this.state.modal})}>*/}
+                                    {/*      <i className={card.leftIcon}></i>*/}
+                                    {/*      <div>*/}
+                                    {/*        <p className="text-muted text-capitalize" style={{marginBottom: "0px"}}>*/}
+                                    {/*          {card.leftSubtitle}*/}
+                                    {/*        </p>*/}
+                                    {/*        <p className="lead text-primary text-capitalize">*/}
+                                    {/*          {this.state.stake && this.state.stake}*/}
+                                    {/*        </p>*/}
+                                    {/*      </div>*/}
+                                    {/*    </button>*/}
 
-                                {/*    <button className="card-body text-center" style={{padding: "4px"}} onClick={(e) => {*/}
-                                {/*      this.redeem()*/}
-                                {/*    }}>*/}
-                                {/*      <i className={card.rightIcon}></i>*/}
-                                {/*      <div>*/}
-                                {/*        <p className="text-muted text-capitalize" style={{marginBottom: "0px"}}>*/}
-                                {/*          {card.rightSubtitle}*/}
-                                {/*        </p>*/}
-                                {/*        <p className="lead text-primary text-capitalize">*/}
-                                {/*          {this.state.rate && this.state.rate}*/}
-                                {/*        </p>*/}
-                                {/*      </div>*/}
-                                {/*    </button>*/}
+                                    {/*    <button className="card-body text-center" style={{padding: "4px"}} onClick={(e) => {*/}
+                                    {/*      this.redeem()*/}
+                                    {/*    }}>*/}
+                                    {/*      <i className={card.rightIcon}></i>*/}
+                                    {/*      <div>*/}
+                                    {/*        <p className="text-muted text-capitalize" style={{marginBottom: "0px"}}>*/}
+                                    {/*          {card.rightSubtitle}*/}
+                                    {/*        </p>*/}
+                                    {/*        <p className="lead text-primary text-capitalize">*/}
+                                    {/*          {this.state.rate && this.state.rate}*/}
+                                    {/*        </p>*/}
+                                    {/*      </div>*/}
+                                    {/*    </button>*/}
 
-                                {/*  </div>*/}
-                                {/*</div>*/}
-                            </Fragment>
-                        ))}
-                    </div>
-                </SimpleCard>
+                                    {/*  </div>*/}
+                                    {/*</div>*/}
+                                </Fragment>
+                            ))}
+                        </div>
+                    </SimpleCard>
 
-                {this.state.modal && <StakingModal/>}
+                    {this.state.modal && <StakingModal/>}
 
 
-            </Fragment>
+                </Fragment>
+            </EthereumDapp>
         );
     }
 }
