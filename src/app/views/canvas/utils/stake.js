@@ -15,7 +15,7 @@ export async function stake(amount){
     console.log("dai:", dai)
 
 
-    // TODO: Approve contract to spend Dai on users behalf if necessary:
+    // Approve contract to spend Dai on users behalf if necessary:
     const DAI_ADDRESS = "0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa";
     let provider = new ethers.providers.Web3Provider(window.web3.currentProvider);
     console.log("provider", provider);
