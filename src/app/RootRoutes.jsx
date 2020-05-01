@@ -19,6 +19,7 @@ import taskManagerRoutes from "./views/app/task-manager/taskManagerRoutes";
 import ecommerceRoutes from "./views/app/ecommerce/ecommerceRoutes";
 import contactRoutes from "./views/app/contact/contactRoutes";
 import dappRoutes from "./views/dapp/dappRoutes";
+import canvasRoutes from "./views/canvas/canvasRoutes";
 
 // import { renderRoutes } from "react-router-config";
 import GullLayout from "app/GullLayout/GullLayout";
@@ -50,7 +51,8 @@ const routes = [
     // component: AuthGuard,
     component: Root,
     routes: [
-        ...dappRoutes,
+      ...dappRoutes,
+      ...canvasRoutes,
       ...dashboardRoutes,
       ...uiKitsRoutes,
       ...formsRoutes,
@@ -68,7 +70,7 @@ const routes = [
       ...ecommerceRoutes,
       ...contactRoutes,
       ...redirectRoute,
-      ...errorRoute
+      ...errorRoute,
     ]
   }
 ];
