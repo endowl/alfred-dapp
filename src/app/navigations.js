@@ -18,7 +18,7 @@ export const navigations = [
     description: "",
     path: "/canvas/stake",
     type: "link",
-    icon: "i-Money-Bag"
+    icon: "i-Coins"
   },
   {
     name: "Estate",
