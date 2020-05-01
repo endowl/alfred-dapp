@@ -6,20 +6,27 @@ export const navigations = [
   //   type: "link",
   //   icon: "i-Money"
   // },
+  // {
+  //   name: "New Estate",
+  //   description: "",
+  //   path: "/dapp/new-estate",
+  //   type: "link",
+  //   icon: "i-Add"
+  // },
   {
-    name: "New Estate",
+    name: "rDai",
     description: "",
-    path: "/dapp/new-estate",
+    path: "/canvas/stake",
     type: "link",
-    icon: "i-Add"
+    icon: "i-Money-Bag"
   },
   {
     name: "Estate",
     description: "",
-    path: "/dapp/estate",
-    type: "link",
+    path: "https://alpha.alfred.estate/",
+    type: "extLink",
     icon: "i-Money-Bag"
-  }
+  },
   // {
   //   name: "Dashboard",
   //   description: "Lorem ipsum dolor sit.",

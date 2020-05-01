@@ -72,8 +72,7 @@ class Stake extends Component {
                 <NotificationContainer/>
                 <SimpleCard title="Stake with rDAI and Donate Interest">
                     <div className="mb-4">
-                        Put your money to work passively, a little goes a long way. Stake your Dai to help fund
-                        Alfred.Estate's DeFi development efforts.
+                        Put your money to work passively. Stake Dai through rDai to help fund Alfred.Estate's DeFi development efforts:
                     </div>
                     <div>
                         {stakeDai.map((card, index) => (
