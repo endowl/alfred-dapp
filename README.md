@@ -1,3 +1,13 @@
+# StakeNation: No-Loss Donations
+Providing meaningful ways for people to engage with each other is what building community is all about. Engagement generally comes in the form of some type of work or money, which can make it difficult for supporters without much of either to feel included.
+
+Our no-loss donation tool provides a new way to leverage community support without directly asking for time or money. Instead, organizations can ask supporters to stake digital assets using rDAI and donate the interest to help fund the project.
+
+Our project features a proof-of-concept to be integrated with the team’s other hackathon submission, a crypto inheritance solution called Alfred. In addition to using the tool to solicit support, we plan to provide a tool enabling others to add “StakeNation” buttons to their websites.
+
+Site: http://rdai.alfred.estate/
+Demo: https://youtu.be/kIrdOoxMWS4
+
 # Alfred
 
 Alfred is a decentralized crypto inheritance solution.
