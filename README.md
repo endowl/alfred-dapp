@@ -1,68 +1,51 @@
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+# Alfred
 
-## Available Scripts
+Alfred is a decentralized crypto inheritance solution.
 
-In the project directory, you can run:
+Missing or stolen private keys have already caused the loss of millions of dollars worth of digital assets. As more and more individuals embrace the ideals of decentralization, a pivotal question remains: “what happens to my digital assets when I can’t access them anymore?”
 
-### `yarn start`
+Website: https://alpha.alfred.estate/
 
-Runs the app in the development mode.<br />
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+Demo: https://youtu.be/855X8umwjl8
 
-The page will reload if you make edits.<br />
-You will also see any lint errors in the console.
+Smart Contract (Mainnet): 0xDEAD120FB5Aad12a3D3cAd140C66dad2A6739422
 
-### `yarn test`
+## How it works
+To secure your digital estate, simply create or sync a Gnosis Safe, designate your beneficiaries and how much of your assets they should receive, and set the check-in period on our decentralized dead man’s switch.
 
-Launches the test runner in the interactive watch mode.<br />
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Features
 
-### `yarn build`
+#### Create your estate
+Alfred uses the Gnosis Safe contract proxy kit to let users create or sync their Estate as part of a Gnosis Safe. 
 
-Builds the app for production to the `build` folder.<br />
-It correctly bundles React in production mode and optimizes the build for the best performance.
+The dApp uses transaction batching to create or sync the Gnosis Safe and set the owner as the individual deploying the transaction.
 
-The build is minified and the filenames include the hashes.<br />
-Your app is ready to be deployed!
+<img src="https://raw.githubusercontent.com/BatmansButler/alfred-dapp/master/images/newestate.jpg?raw=true"/>
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+#### Designate an executor and beneficiaries and assign shares for inheritances
+Set the addresses you want to receive your assets and assign shares to allow them to claim their inheritance. The owner of an Estate can also designate an executor. 
 
-### `yarn eject`
+<img src="https://raw.githubusercontent.com/BatmansButler/alfred-dapp/master/images/beneficiary.jpg?raw=true"/>
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+#### Set up Recovery
+In addition to serving as your personal Estate, the "Bring Out Your Dead" smart contract also provides a Gnosis Safe Recovery Module. If the owner ever loses their keys, the Recovery Module enables your Gnosis Safe and Estate to be recovered with the help of the executor and beneficiaries based on the owners preferences.
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+<img src="https://raw.githubusercontent.com/BatmansButler/alfred-dapp/master/images/recovery.jpg?raw=true"/>
 
-Instead, it will copy all the configuration files and the transitive dependencies (Webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+#### Generate proof-of-life using the decentralized dead man's switch
+Set the number of days you want to go between checking in with Alfred and activate your estate plan with the flip of a switch. Providing proof-of-life is as simple as clicking the "Check-In" button on your Estate Dashboard.
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+<img src="https://raw.githubusercontent.com/BatmansButler/alfred-dapp/master/images/estatedms.jpg?raw=true"/>
 
-## Learn More
+When the dead man's switch stops generating proof-of-life, assets stored in the Estate and in your Gnosis Safe are distributed to the beneficiaries according to the wishes of the deceased. 
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+#### Token Tracker
+Once you've deposited funds, use the Token Tracker on the Estate Dashboard to keep track of the value of your estate.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+<img src="https://raw.githubusercontent.com/BatmansButler/alfred-dapp/master/images/tokentracker.jpg?raw=true"/>
 
-### Code Splitting
+#### Have we got your interest? Allow us to hodl it with RDai!
+Support our work through direct donations OR stake with RDai and allow us to keep the interest to fund continued development *without* losing your assets.
 
-This section has moved here: https://facebook.github.io/create-react-app/docs/code-splitting
-
-### Analyzing the Bundle Size
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size
-
-### Making a Progressive Web App
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app
-
-### Advanced Configuration
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/advanced-configuration
-
-### Deployment
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/deployment
-
-### `yarn build` fails to minify
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify
+## Warning
+Alfred's code has ***NOT*** been audited. Until we can convince him a security audit *doesn't* involve the IRS, please don't deposit more funds than you're willing to lose.
