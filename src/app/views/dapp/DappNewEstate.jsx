@@ -289,7 +289,7 @@ function DappNewEstate(props) {
             }
         }
         fetchData();
-    }, [wallet.connected, wallet.account]);
+    }, [wallet]);
 
     // TODO: Revisit breadcrumbs flow
 

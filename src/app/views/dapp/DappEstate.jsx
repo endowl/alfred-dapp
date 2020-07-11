@@ -844,7 +844,7 @@ function DappEstate(props) {
             fetchData();
         }
 
-    }, [wallet.connected, wallet.account, estateAddress]);
+    }, [wallet, estateAddress]);
 
     return (
         <EthereumDapp>
@@ -1418,7 +1418,7 @@ function DappEstate(props) {
                                                                    title="Send"
                                                                    onClick={() => setShowTodo(true)} />
                                                             </span>
-                                                            {asset.address != ethers.constants.AddressZero && (
+                                                            {asset.address !== ethers.constants.AddressZero && (
                                                                 <Fragment>
                                                                     <span
                                                                         className="cursor-pointer text-danger mr-2">

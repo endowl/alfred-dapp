@@ -1,9 +1,9 @@
 import React, { Component } from "react";
 import { Dropdown } from "react-bootstrap";
 import DropdownMenu from "react-bootstrap/DropdownMenu";
-import { getTimeDifference } from "@utils";
+// import { getTimeDifference } from "@utils";
 import DropdownToggle from "react-bootstrap/DropdownToggle";
-import { Link } from "react-router-dom";
+// import { Link } from "react-router-dom";
 
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
@@ -15,7 +15,7 @@ import { logoutUser } from "app/redux/actions/UserActions";
 import { withRouter } from "react-router-dom";
 
 import { merge } from "lodash";
-import MegaMenu from "@gull/components/MegaMenu";
+// import MegaMenu from "@gull/components/MegaMenu";
 import {useWallet} from "use-wallet";
 import localStorageService from "../../services/localStorageService";
 

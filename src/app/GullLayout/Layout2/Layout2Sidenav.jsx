@@ -32,18 +32,18 @@ class Layout2Sidenav extends Component {
         item.sub.forEach(child => {
           if (child.sub) {
             child.sub.forEach(grandChild => {
-              if (grandChild.path == this.props.history.location.pathname) {
+              if (grandChild.path === this.props.history.location.pathname) {
                 this.setSelected(item);
               }
             });
           } else {
-            if (child.path == this.props.history.location.pathname) {
+            if (child.path === this.props.history.location.pathname) {
               this.setSelected(item);
             }
           }
         });
       } else {
-        if (item.path == this.props.history.location.pathname) {
+        if (item.path === this.props.history.location.pathname) {
           this.setSelected(item);
         }
       }
