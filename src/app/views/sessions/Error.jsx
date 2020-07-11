@@ -11,7 +11,7 @@ class Error extends Component {
         <p className="mb-5  text-muted text-18">
           Sorry! The page you were looking for doesn't exist.
         </p>
-        <Link to="/dashboard/v1" className="btn btn-lg btn-primary btn-rounded">
+        <Link to="/" className="btn btn-lg btn-primary btn-rounded">
           Go back to home
         </Link>
       </div>
