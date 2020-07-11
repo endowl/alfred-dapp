@@ -1,4 +1,4 @@
-import "../fake-db";
+// import "../fake-db";
 import React, { Suspense } from "react";
 import "../styles/app/app.scss";
 
