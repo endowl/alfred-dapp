@@ -10,7 +10,7 @@ function LinkEtherscanTx(props) {
     }
     // TODO Add other networks
     return (
-        <a href={txHashUrl} target="_blank" title={props.txHash}><Fragment>{props.children}</Fragment></a>
+        <a href={txHashUrl} target="_blank" rel="noopener noreferrer" title={props.txHash}><Fragment>{props.children}</Fragment></a>
     )
 }
 
