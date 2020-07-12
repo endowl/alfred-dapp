@@ -28,7 +28,7 @@ function WalletConnection() {
             <Dropdown>
               <DropdownToggle as="span" className="toggle-hidden cursor-pointer">
                 <img
-                    src="/assets/images/faces/3.jpg"
+                    src="/assets/images/alfred0-fbfbfb-bg-blue-oval.png"
                     id="userDropdown"
                     alt=""
                     data-toggle="dropdown"
@@ -52,7 +52,7 @@ function WalletConnection() {
             <Dropdown>
               <DropdownToggle as="span" className="toggle-hidden cursor-pointer">
                 <img
-                    src="/assets/images/faces/3.jpg"
+                    src="/assets/images/alfred0-fbfbfb-bg-blue-oval.png"
                     id="userDropdown"
                     alt=""
                     data-toggle="dropdown"
