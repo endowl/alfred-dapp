@@ -24,7 +24,8 @@ class App extends React.Component {
 
             <AppContext.Provider value={{routes}}>
                 <Provider store={Store}>
-                    <UseWalletProvider chainId={42} connectors={{portis: { dAppId: 'b84b9829-51b0-480b-a1d2-1cfc112db3d3' }}}>
+                    {/*<UseWalletProvider chainId={42} connectors={{portis: { dAppId: 'b84b9829-51b0-480b-a1d2-1cfc112db3d3' }}}>*/}
+                    <UseWalletProvider chainId={1337} connectors={{portis: { dAppId: 'b84b9829-51b0-480b-a1d2-1cfc112db3d3' }}}>
                         {/*<Auth>*/}
                             <Suspense fallback={<Loading></Loading>}>
                                 <Router history={history}>{renderRoutes(RootRoutes)}</Router>

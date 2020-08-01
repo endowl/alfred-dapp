@@ -5,14 +5,14 @@ import EthereumDapp from "./EthereumDapp";
 import {Badge, Card} from "react-bootstrap";
 import {Form, Modal, Button} from "react-bootstrap";
 import {ethers} from 'ethers';
-import bringOutYourDeadAbi from "../../../abi/bringOutYourDeadAbi";
+import alfredEstateAbi from "../../../abi/alfredEstateAbi";
 import erc20Abi from "../../../abi/erc20";
 import gnosisModuleManagerAbi from "../../../abi/gnosisModuleManagerAbi";
 import gnosisOwnerManagerAbi from "../../../abi/gnosisOwnerManagerAbi";
 import EthereumAddress from './EthereumAddress';
 import localStorageService from "../../services/localStorageService";
 import PieChart from "./PieChart";
-// import bringOutYourDeadFactoryAbi from "../../../abi/bringOutYourDeadFactoryAbi";
+// import alfredEstateFactoryAbi from "../../../abi/alfredEstateFactoryAbi";
 import {NotificationManager} from "react-notifications";
 import moment from "moment";
 
@@ -127,7 +127,7 @@ function DappEstate(props) {
         const cpk = await CPK.create({ethers, signer: signer});
 
         // Prepare calldata for multi-transaction call to Gnosis Safe by way of Contract Proxy Kit
-        const boydInterface = new ethers.utils.Interface(bringOutYourDeadAbi);
+        const estateInterface = new ethers.utils.Interface(alfredEstateAbi);
         const moduleManagerInterface = new ethers.utils.Interface(gnosisModuleManagerAbi);
 
         let txs = [];
@@ -153,8 +153,8 @@ function DappEstate(props) {
             });
         }
 
-        const executorSettingsData = boydInterface.functions.setIsExecutorRequiredForSafeRecovery.encode([gnosisRecoveryFormExecutor]);
-        const beneficiarySettingsData = boydInterface.functions.setBeneficiariesRequiredForSafeRecovery.encode([gnosisRecoveryFormMinBeneficiaries]);
+        const executorSettingsData = estateInterface.functions.setIsExecutorRequiredForSafeRecovery.encode([gnosisRecoveryFormExecutor]);
+        const beneficiarySettingsData = estateInterface.functions.setBeneficiariesRequiredForSafeRecovery.encode([gnosisRecoveryFormMinBeneficiaries]);
 
         txs.push({
             operation: CPK.CALL,
@@ -189,7 +189,7 @@ function DappEstate(props) {
             );
         });
 
-        let estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
+        let estateContract = new ethers.Contract(estateAddress, alfredEstateAbi, signer);
         estateContract.on("BeneficiariesRequiredForSafeRecoveryChanged", async (newValue, event) => {
             setGnosisSafeRecoveryMinimumBeneficiaries(newValue);
             console.log("Beneficiaries required updated: ", newValue);
@@ -228,11 +228,11 @@ function DappEstate(props) {
         const cpk = await CPK.create({ethers, signer: signer});
 
         // Prepare calldata for multi-transaction call to Gnosis Safe by way of Contract Proxy Kit
-        const boydInterface = new ethers.utils.Interface(bringOutYourDeadAbi);
+        const estateInterface = new ethers.utils.Interface(alfredEstateAbi);
         let txs = [];
         const checkinSeconds = deadMansSwitchFormCheckinMinutes > 0 ? deadMansSwitchFormCheckinMinutes * 60 : 0;
-        const enabledData = boydInterface.functions.setIsDeadMansSwitchEnabled.encode([isDeadMansSwitchFormEnabled]);
-        const periodData = boydInterface.functions.setDeadMansSwitchCheckinSeconds.encode([checkinSeconds]);
+        const enabledData = estateInterface.functions.setIsDeadMansSwitchEnabled.encode([isDeadMansSwitchFormEnabled]);
+        const periodData = estateInterface.functions.setDeadMansSwitchCheckinSeconds.encode([checkinSeconds]);
 
         txs.push({
             operation: CPK.CALL,
@@ -249,7 +249,7 @@ function DappEstate(props) {
         });
 
         // Listen for events and update accordingly
-        let estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
+        let estateContract = new ethers.Contract(estateAddress, alfredEstateAbi, signer);
         estateContract.on("DeadMansSwitchCheckinSecondsChanged", async (newValue, event) => {
             setDeadMansSwitchCheckinSeconds(newValue);
             console.log("DeadMansSwitchCheckinSecondsChanged: ", newValue);
@@ -287,7 +287,7 @@ function DappEstate(props) {
         event.preventDefault();
         let provider = new ethers.providers.Web3Provider(wallet.ethereum);
         const signer = provider.getSigner(0);
-        let estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
+        let estateContract = new ethers.Contract(estateAddress, alfredEstateAbi, signer);
 
         // TODO: Track down possible error with executor distributing payments after a beneficiary has claimed shares!
 
@@ -327,7 +327,7 @@ function DappEstate(props) {
 
         let provider = new ethers.providers.Web3Provider(wallet.ethereum);
         const signer = provider.getSigner(0);
-        let estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
+        let estateContract = new ethers.Contract(estateAddress, alfredEstateAbi, signer);
         try {
             console.log(event);
             if(address === ethers.constants.AddressZero) {
@@ -366,7 +366,7 @@ function DappEstate(props) {
         // TODO: Form validation
         let provider = new ethers.providers.Web3Provider(wallet.ethereum);
         const signer = provider.getSigner(0);
-        let estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
+        let estateContract = new ethers.Contract(estateAddress, alfredEstateAbi, signer);
         try {
             await estateContract.addBeneficiary(editBeneficiaryAddress, editBeneficiaryShares);
             setShowEditBeneficiary(false);
@@ -395,7 +395,7 @@ function DappEstate(props) {
         event.preventDefault();
         const provider = new ethers.providers.Web3Provider(wallet.ethereum);
         const signer = provider.getSigner(0);
-        const estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
+        const estateContract = new ethers.Contract(estateAddress, alfredEstateAbi, signer);
 
         // Get calldata for OwnerManager.swapOwner(address prevOwner, address oldOwner, address newOwner)
         // Naively assuming there is currently only own owner of the Gnosis Safe
@@ -468,7 +468,7 @@ function DappEstate(props) {
         event.preventDefault();
         const provider = new ethers.providers.Web3Provider(wallet.ethereum);
         const signer = provider.getSigner(0);
-        const estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
+        const estateContract = new ethers.Contract(estateAddress, alfredEstateAbi, signer);
 
         // NOTE: This might only the first time the Estate is recovered. Subsequent recoveries will use a different
         //       old owner address and incorrectly calculate the Gnosis Safe address.  The Gnosis Safe address is
@@ -483,11 +483,11 @@ function DappEstate(props) {
         // console.log("cpk", cpk);
 
         // Prepare calldata for multi-transaction call to Gnosis Safe through Contract Proxy Kit
-        const boydInterface = new ethers.utils.Interface(bringOutYourDeadAbi);
+        const estateInterface = new ethers.utils.Interface(alfredEstateAbi);
         // Transfer ownership to self
-        const transferOwnershipData = boydInterface.functions.transferOwnership.encode([wallet.account]);
+        const transferOwnershipData = estateInterface.functions.transferOwnership.encode([wallet.account]);
         // Check-in as alive
-        const checkinData = boydInterface.functions.imNotDeadYet.encode([]);
+        const checkinData = estateInterface.functions.imNotDeadYet.encode([]);
 
         let txs = [
             {
@@ -532,7 +532,7 @@ function DappEstate(props) {
         event.preventDefault();
         const provider = new ethers.providers.Web3Provider(wallet.ethereum);
         const signer = provider.getSigner(0);
-        const estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
+        const estateContract = new ethers.Contract(estateAddress, alfredEstateAbi, signer);
 
         try {
             await estateContract.bringOutYourDead();
@@ -560,7 +560,7 @@ function DappEstate(props) {
         event.preventDefault();
         const provider = new ethers.providers.Web3Provider(wallet.ethereum);
         const signer = provider.getSigner(0);
-        const estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
+        const estateContract = new ethers.Contract(estateAddress, alfredEstateAbi, signer);
 
         try {
             await estateContract.imNotDeadYet();
@@ -589,7 +589,7 @@ function DappEstate(props) {
         const signer = provider.getSigner(0);
         let estateContract;
         try {
-            estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
+            estateContract = new ethers.Contract(estateAddress, alfredEstateAbi, signer);
         } catch (e) {
             console.log("ERROR while refreshing beneficiaries");
             console.log(e);
@@ -620,7 +620,7 @@ function DappEstate(props) {
     async function refreshAssets(_beneficiarySelfShares) {
         const provider = new ethers.providers.Web3Provider(wallet.ethereum);
         const signer = provider.getSigner(0);
-        let estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
+        let estateContract = new ethers.Contract(estateAddress, alfredEstateAbi, signer);
         // Determine tracked assets
         let _trackedTokens = [];
         let assetAddress = null;
@@ -735,7 +735,7 @@ function DappEstate(props) {
             let estateContract;
             let _gnosisSafe = null;
             try {
-                estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
+                estateContract = new ethers.Contract(estateAddress, alfredEstateAbi, signer);
                 console.log(estateContract);
                 let _owner = await estateContract.owner();
                 setOwner(_owner);
