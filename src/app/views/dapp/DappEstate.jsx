@@ -22,6 +22,8 @@ const CPK = require('contract-proxy-kit');
 // Sentinal address is used on ends of Gnosis Safe linked lists
 const SENTINAL_ADDRESS = "0x0000000000000000000000000000000000000001";
 
+const LIFESIGNS = { Alive: 0, Uncertain: 1, Dead: 2, SimulatedDead: 3 };
+
 function BeneficiaryPieChart({beneficiaries, name = "Beneficiary Shares"}) {
     console.log(beneficiaries);
     let data = [];
@@ -922,17 +924,17 @@ function DappEstate(props) {
                         </div>
                         <div>
                             Life Signs:
-                            {(liveliness === 0 && deadMansSwitchLastCheckin.add(deadMansSwitchCheckinSeconds).gt(blockchainTimestamp)) && (
+                            {(liveliness === LIFESIGNS.Alive && deadMansSwitchLastCheckin.add(deadMansSwitchCheckinSeconds).gt(blockchainTimestamp)) && (
                                 <Badge pill variant="success" className="badge-outline-success p-2 m-1">
                                     Alive
                                 </Badge>
                             )}
-                            {(liveliness === 2 || (liveliness === 0 && deadMansSwitchLastCheckin.gt(0) && deadMansSwitchLastCheckin.add(deadMansSwitchCheckinSeconds).lte(blockchainTimestamp)) ) && (
+                            {(liveliness === LIFESIGNS.Uncertain || (liveliness === LIFESIGNS.Alive && deadMansSwitchLastCheckin.gt(0) && deadMansSwitchLastCheckin.add(deadMansSwitchCheckinSeconds).lte(blockchainTimestamp)) ) && (
                                 <Badge pill variant="warning" className="badge-outline-warning p-2 m-1">
                                     Uncertain
                                 </Badge>
                             )}
-                            {liveliness === 1 && (
+                            {liveliness === LIFESIGNS.Dead && (
                                 <Badge pill variant="danger" className="badge-outline-danger p-2 m-1">
                                     Dead
                                 </Badge>
@@ -961,7 +963,7 @@ function DappEstate(props) {
                     </SimpleCard>
 
                     {/* TODO: Display dead man's switch status but not controls to non-owners */}
-                    {(liveliness !== 1 && (isOwner || isDeadMansSwitchEnabled)) && (
+                    {(liveliness !== LIFESIGNS.Dead && (isOwner || isDeadMansSwitchEnabled)) && (
                         <div className="row">
                             <div className="col-lg-6">
                                 <SimpleCard title="Dead Man's Switch" className="mb-4">
@@ -1034,7 +1036,7 @@ function DappEstate(props) {
                                         </div>
                                     )}
                                     {/* Display when owner is alive but past due to check in to dead man switch and user is executor or beneficiary */}
-                                    {(liveliness === 0 && deadMansSwitchLastCheckin.add(deadMansSwitchCheckinSeconds).lte(blockchainTimestamp) && (executor === wallet.account || beneficiarySelfShares > 0)) && (
+                                    {(liveliness === LIFESIGNS.Alive && deadMansSwitchLastCheckin.add(deadMansSwitchCheckinSeconds).lte(blockchainTimestamp) && (executor === wallet.account || beneficiarySelfShares > 0)) && (
                                         <div className="row">
                                             <div className="col-lg-12 col-md-12 col-sm-12">
                                                 <Button
@@ -1100,7 +1102,7 @@ function DappEstate(props) {
                     )}
 
                     {/* Only display this to Executors and Beneficiaries while Owner is still alive and Recovery Module is enabled */}
-                    {((executor === wallet.account || beneficiarySelfShares > 0) && liveliness === 0 && isGnosisSafeRecoveryEnabled) && (
+                    {((executor === wallet.account || beneficiarySelfShares > 0) && liveliness === LIFESIGNS.Alive && isGnosisSafeRecoveryEnabled) && (
                         <SimpleCard title="Recover Access to Estate and Gnosis Safe" className="mb-4">
                             <div>
                                 If the owner of this estate has lost access to their Ethereum wallet, you can assist them with recovering control of their Gnosis Safe and their Estate.
@@ -1133,7 +1135,7 @@ function DappEstate(props) {
                     )}
 
                     {/* Only display this to GnosisSafe owner when they differ from estate Owner and the owner is still alive */}
-                    { (isGnosisSafeOwner && !isOwner && liveliness === 0) && (
+                    { (isGnosisSafeOwner && !isOwner && liveliness === LIFESIGNS.Alive) && (
                         <SimpleCard title="Finish Estate Recovery In Progress" className="mb-4">
                             <div>
                                 Your Estate recovery is almost complete.  You have successfully regained control of your Gnosis Safe.
@@ -1148,7 +1150,7 @@ function DappEstate(props) {
                     )}
 
                     {/* Only display this to Executors after Death has been established */}
-                    { (executor === wallet.account && liveliness === 1) && (
+                    { (executor === wallet.account && liveliness === LIFESIGNS.Dead) && (
                         <SimpleCard title="Distribute Inheritance to Beneficiaries" className="mb-4">
                             {assets.length === 0 ? (
                                 <div className="loader-bubble loader-bubble-primary m-5" />
@@ -1207,7 +1209,7 @@ function DappEstate(props) {
                     )}
 
                     {/* Only display this to Beneficiaries after Death has been established */}
-                    {(beneficiarySelfShares > 0 && liveliness === 1) && (
+                    {(beneficiarySelfShares > 0 && liveliness === LIFESIGNS.Dead) && (
                         <SimpleCard title="Claim My Share of Inheritance" className="mb-4">
                             {inheritance === null ? (
                                 <div className="loader-bubble loader-bubble-primary m-5" />
@@ -1301,7 +1303,7 @@ function DappEstate(props) {
                                                             <th>#</th>
                                                             <th>Address</th>
                                                             <th>Shares</th>
-                                                            {(isOwner || (wallet.address === executor && liveliness === 2)) && (
+                                                            {(isOwner || (wallet.address === executor && liveliness === LIFESIGNS.Dead)) && (
                                                                 <th>Action</th>
                                                             )}
                                                         </tr>
@@ -1321,18 +1323,18 @@ function DappEstate(props) {
                                                                 <td>
                                                                     {beneficiary.shares}
                                                                 </td>
-                                                                {(isOwner || (wallet.address === executor && liveliness === 2)) && (
+                                                                {(isOwner || (wallet.address === executor && liveliness === LIFESIGNS.Dead)) && (
                                                                     <td>
-                                                                                <span className="cursor-pointer text-success mr-2">
-                                                                                    <i className="nav-icon i-Pen-2 font-weight-bold"
-                                                                                       title="Edit beneficiary"
-                                                                                       onClick={() => setShowTodo(true)} />
-                                                                                </span>
+                                                                        <span className="cursor-pointer text-success mr-2">
+                                                                            <i className="nav-icon i-Pen-2 font-weight-bold"
+                                                                               title="Edit beneficiary"
+                                                                               onClick={() => setShowTodo(true)} />
+                                                                        </span>
                                                                         <span className="cursor-pointer text-danger mr-2">
-                                                                                    <i className="nav-icon i-Close-Window font-weight-bold"
-                                                                                       title="Remove beneficiary"
-                                                                                       onClick={() => setShowTodo(true)} />
-                                                                                </span>
+                                                                            <i className="nav-icon i-Close-Window font-weight-bold"
+                                                                               title="Remove beneficiary"
+                                                                               onClick={() => setShowTodo(true)} />
+                                                                        </span>
                                                                     </td>
                                                                 )}
                                                             </tr>
