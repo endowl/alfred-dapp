@@ -68,10 +68,12 @@ function NewEstateForm(props) {
         const estateInterface = new ethers.utils.Interface(alfredEstateAbi);
 
 
-        let newEstateData = estateFactoryInterface.functions.newEstate.encode([oracleParam, executorParam, props.salt]);
-        // TODO: Add call to estateInterface.functions.setupGnosisSafe.encode(.....)
-        let gnosisSetupData = estateInterface.functions.gnosisSafeSetup.encode([]);
-        let transferOwnershipData = estateInterface.functions.transferOwnership.encode([wallet.account]);
+        // let newEstateData = estateFactoryInterface.functions.newEstate.encode([oracleParam, executorParam, props.salt]);
+        // let gnosisSetupData = estateInterface.functions.gnosisSafeSetup.encode([]);
+        // let transferOwnershipData = estateInterface.functions.transferOwnership.encode([wallet.account]);
+        let newEstateData = estateFactoryInterface.encodeFunctionData("newEstate", [oracleParam, executorParam, props.salt]);
+        let gnosisSetupData = estateInterface.encodeFunctionData("gnosisSafeSetup", []);
+        let transferOwnershipData = estateInterface.encodeFunctionData("transferOwnership", [wallet.account]);
 
         const txs = [
             {
