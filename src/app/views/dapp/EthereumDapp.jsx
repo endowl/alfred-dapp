@@ -34,7 +34,7 @@ function EthereumDapp(props) {
         <div>
             <SimpleCard title="Connect to Ethereum Wallet" className="mb-4">
                 Using this dApp requires connecting to an Ethereum browser wallet. Please select your wallet to activate the dApp:
-                {/*During development use the <strong>Kovan testnet</strong>.  */}
+                During development use the <strong>Kovan testnet</strong>.
                 <div>
                     <button className="btn-rounded m-1 btn btn-warning" onClick={() => {
                         wallet.activate();

@@ -12,7 +12,7 @@ function EthereumAddress(props) {
     return (
         <Fragment>
             {props.url ? (
-                <a href={props.url} target="_blank"><Fragment>{props.children}</Fragment></a>
+                <a href={props.url} target="_blank" rel="noopener noreferrer"><Fragment>{props.children}</Fragment></a>
             ) : (
                 <Fragment>
                     {props.children}
@@ -20,7 +20,7 @@ function EthereumAddress(props) {
             )}
             <CopyToClipboard text={props.address}>
                 <i className="i-File-Clipboard-File--Text cursor-pointer nav-icon" title="Copy to clipboard" />
-            </CopyToClipboard> <a href={etherscanUrl} target="_blank" title="Open on Etherscan">
+            </CopyToClipboard> <a href={etherscanUrl} target="_blank" rel="noopener noreferrer" title="Open on Etherscan">
                 <i className="i-Two-Windows nav-icon" />
             </a>
         </Fragment>

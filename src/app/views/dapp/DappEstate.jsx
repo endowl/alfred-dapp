@@ -1,18 +1,18 @@
 import React, {useState, Fragment, useEffect} from "react";
-import {Breadcrumb, SimpleCard, CodeViewer} from "@gull";
+import {Breadcrumb, SimpleCard} from "@gull";
 import {useWallet} from "use-wallet";
 import EthereumDapp from "./EthereumDapp";
 import {Badge, Card} from "react-bootstrap";
 import {Form, Modal, Button} from "react-bootstrap";
 import {ethers} from 'ethers';
-import bringOutYourDeadAbi from "../../../abi/bringOutYourDeadAbi";
+import alfredEstateAbi from "../../../abi/alfredEstateAbi";
 import erc20Abi from "../../../abi/erc20";
 import gnosisModuleManagerAbi from "../../../abi/gnosisModuleManagerAbi";
 import gnosisOwnerManagerAbi from "../../../abi/gnosisOwnerManagerAbi";
 import EthereumAddress from './EthereumAddress';
 import localStorageService from "../../services/localStorageService";
 import PieChart from "./PieChart";
-// import bringOutYourDeadFactoryAbi from "../../../abi/bringOutYourDeadFactoryAbi";
+// import alfredEstateFactoryAbi from "../../../abi/alfredEstateFactoryAbi";
 import {NotificationManager} from "react-notifications";
 import moment from "moment";
 
@@ -21,6 +21,8 @@ const CPK = require('contract-proxy-kit');
 
 // Sentinal address is used on ends of Gnosis Safe linked lists
 const SENTINAL_ADDRESS = "0x0000000000000000000000000000000000000001";
+
+const LIFESIGNS = { Alive: 0, Uncertain: 1, Dead: 2, SimulatedDead: 3 };
 
 function BeneficiaryPieChart({beneficiaries, name = "Beneficiary Shares"}) {
     console.log(beneficiaries);
@@ -107,18 +109,18 @@ function DappEstate(props) {
     const [editBeneficiaryShares, setEditBeneficiaryShares] = useState('');
     const [isGnosisSafeRecoveryEnabled, setIsGnosisSafeRecoveryEnabled] = useState(false);
     const [isGnosisSafeRecoveryExecutor, setIsGnosisSafeRecoveryExecutor] = useState(false);
-    const [gnosisSafeRecoveryMinimumBeneficiaries, setGnosisSafeRecoveryMinimumBeneficiaries] = useState(ethers.utils.bigNumberify(0));
+    const [gnosisSafeRecoveryMinimumBeneficiaries, setGnosisSafeRecoveryMinimumBeneficiaries] = useState(ethers.BigNumber.from(0));
     const [gnosisRecoveryFormEnabled, setGnosisRecoveryFormEnabled] = useState(false);
     const [gnosisRecoveryFormExecutor, setGnosisRecoveryFormExecutor] = useState(false);
     const [gnosisRecoveryFormMinBeneficiaries, setGnosisRecoveryFormMinBeneficiaries] = useState('');
     const [gnosisRecoveryFormNewOwner, setGnosisRecoveryFormNewOwner] = useState('');
     const [isDeadMansSwitchEnabled, setIsDeadMansSwitchEnabled] = useState(false);
     const [deadMansSwitchCheckinSeconds, setDeadMansSwitchCheckinSeconds] = useState(0);
-    const [deadMansSwitchLastCheckin, setDeadMansSwitchLastCheckin] = useState(ethers.utils.bigNumberify(0));
+    const [deadMansSwitchLastCheckin, setDeadMansSwitchLastCheckin] = useState(ethers.BigNumber.from(0));
     const [isDeadMansSwitchFormEnabled, setIsDeadMansSwitchFormEnabled] = useState(false);
     // const [deadMansSwitchFormCheckinSeconds, setDeadMansSwitchFormCheckinSeconds] = useState(0);
     const [deadMansSwitchFormCheckinMinutes, setDeadMansSwitchFormCheckinMinutes] = useState(0);
-    const [blockchainTimestamp, setBlockchainTimestamp] = useState(ethers.utils.bigNumberify(0));
+    const [blockchainTimestamp, setBlockchainTimestamp] = useState(ethers.BigNumber.from(0));
 
     async function handleUpdateGnosisSafeRecovery(event) {
         event.preventDefault();
@@ -127,13 +129,14 @@ function DappEstate(props) {
         const cpk = await CPK.create({ethers, signer: signer});
 
         // Prepare calldata for multi-transaction call to Gnosis Safe by way of Contract Proxy Kit
-        const boydInterface = new ethers.utils.Interface(bringOutYourDeadAbi);
+        const estateInterface = new ethers.utils.Interface(alfredEstateAbi);
         const moduleManagerInterface = new ethers.utils.Interface(gnosisModuleManagerAbi);
 
         let txs = [];
         if(gnosisRecoveryFormEnabled && !isGnosisSafeRecoveryEnabled) {
             // Enable estate to serve as a recovery module for gnosis safe
-            let enableModuleData = moduleManagerInterface.functions.enableModule.encode([estateAddress]);
+            // let enableModuleData = moduleManagerInterface.functions.enableModule.encode([estateAddress]);
+            let enableModuleData = moduleManagerInterface.encodeFunctionData("enableModule", [estateAddress]);
             txs.push({
                 operation: CPK.CALL,
                 to: gnosisSafe,
@@ -144,7 +147,8 @@ function DappEstate(props) {
             // Disable estate from serving as a recovery module for gnosis safe
             // NOTE: Currently making the unsafe assumption that no other recovery modules are present on the gnosis safe
             // TODO: Use moduleManagerInterface.functions.getModules() or .getModulesPaginated(address,uint256) to determine the correct linked list target
-            let disableModuleData = moduleManagerInterface.functions.disableModule.encode([SENTINAL_ADDRESS, estateAddress]);
+            // let disableModuleData = moduleManagerInterface.functions.disableModule.encode([SENTINAL_ADDRESS, estateAddress]);
+            let disableModuleData = moduleManagerInterface.encodeFunctionData("disableModule", [SENTINAL_ADDRESS, estateAddress]);
             txs.push({
                 operation: CPK.CALL,
                 to: gnosisSafe,
@@ -153,8 +157,10 @@ function DappEstate(props) {
             });
         }
 
-        const executorSettingsData = boydInterface.functions.setIsExecutorRequiredForSafeRecovery.encode([gnosisRecoveryFormExecutor]);
-        const beneficiarySettingsData = boydInterface.functions.setBeneficiariesRequiredForSafeRecovery.encode([gnosisRecoveryFormMinBeneficiaries]);
+        // const executorSettingsData = estateInterface.functions.setIsExecutorRequiredForSafeRecovery.encode([gnosisRecoveryFormExecutor]);
+        // const beneficiarySettingsData = estateInterface.functions.setBeneficiariesRequiredForSafeRecovery.encode([gnosisRecoveryFormMinBeneficiaries]);
+        const executorSettingsData = estateInterface.encodeFunctionData("setIsExecutorRequiredForSafeRecovery",[gnosisRecoveryFormExecutor]);
+        const beneficiarySettingsData = estateInterface.encodeFunctionData("setBeneficiariesRequiredForSafeRecovery", [gnosisRecoveryFormMinBeneficiaries]);
 
         txs.push({
             operation: CPK.CALL,
@@ -189,7 +195,7 @@ function DappEstate(props) {
             );
         });
 
-        let estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
+        let estateContract = new ethers.Contract(estateAddress, alfredEstateAbi, signer);
         estateContract.on("BeneficiariesRequiredForSafeRecoveryChanged", async (newValue, event) => {
             setGnosisSafeRecoveryMinimumBeneficiaries(newValue);
             console.log("Beneficiaries required updated: ", newValue);
@@ -228,11 +234,13 @@ function DappEstate(props) {
         const cpk = await CPK.create({ethers, signer: signer});
 
         // Prepare calldata for multi-transaction call to Gnosis Safe by way of Contract Proxy Kit
-        const boydInterface = new ethers.utils.Interface(bringOutYourDeadAbi);
+        const estateInterface = new ethers.utils.Interface(alfredEstateAbi);
         let txs = [];
         const checkinSeconds = deadMansSwitchFormCheckinMinutes > 0 ? deadMansSwitchFormCheckinMinutes * 60 : 0;
-        const enabledData = boydInterface.functions.setIsDeadMansSwitchEnabled.encode([isDeadMansSwitchFormEnabled]);
-        const periodData = boydInterface.functions.setDeadMansSwitchCheckinSeconds.encode([checkinSeconds]);
+        // const enabledData = estateInterface.functions.setIsDeadMansSwitchEnabled.encode([isDeadMansSwitchFormEnabled]);
+        // const periodData = estateInterface.functions.setDeadMansSwitchCheckinSeconds.encode([checkinSeconds]);
+        const enabledData = estateInterface.encodeFunctionData("setIsDeadMansSwitchEnabled", [isDeadMansSwitchFormEnabled]);
+        const periodData = estateInterface.encodeFunctionData("setDeadMansSwitchCheckinSeconds", [checkinSeconds]);
 
         txs.push({
             operation: CPK.CALL,
@@ -249,7 +257,7 @@ function DappEstate(props) {
         });
 
         // Listen for events and update accordingly
-        let estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
+        let estateContract = new ethers.Contract(estateAddress, alfredEstateAbi, signer);
         estateContract.on("DeadMansSwitchCheckinSecondsChanged", async (newValue, event) => {
             setDeadMansSwitchCheckinSeconds(newValue);
             console.log("DeadMansSwitchCheckinSecondsChanged: ", newValue);
@@ -287,7 +295,7 @@ function DappEstate(props) {
         event.preventDefault();
         let provider = new ethers.providers.Web3Provider(wallet.ethereum);
         const signer = provider.getSigner(0);
-        let estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
+        let estateContract = new ethers.Contract(estateAddress, alfredEstateAbi, signer);
 
         // TODO: Track down possible error with executor distributing payments after a beneficiary has claimed shares!
 
@@ -327,7 +335,7 @@ function DappEstate(props) {
 
         let provider = new ethers.providers.Web3Provider(wallet.ethereum);
         const signer = provider.getSigner(0);
-        let estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
+        let estateContract = new ethers.Contract(estateAddress, alfredEstateAbi, signer);
         try {
             console.log(event);
             if(address === ethers.constants.AddressZero) {
@@ -366,7 +374,7 @@ function DappEstate(props) {
         // TODO: Form validation
         let provider = new ethers.providers.Web3Provider(wallet.ethereum);
         const signer = provider.getSigner(0);
-        let estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
+        let estateContract = new ethers.Contract(estateAddress, alfredEstateAbi, signer);
         try {
             await estateContract.addBeneficiary(editBeneficiaryAddress, editBeneficiaryShares);
             setShowEditBeneficiary(false);
@@ -395,7 +403,7 @@ function DappEstate(props) {
         event.preventDefault();
         const provider = new ethers.providers.Web3Provider(wallet.ethereum);
         const signer = provider.getSigner(0);
-        const estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
+        const estateContract = new ethers.Contract(estateAddress, alfredEstateAbi, signer);
 
         // Get calldata for OwnerManager.swapOwner(address prevOwner, address oldOwner, address newOwner)
         // Naively assuming there is currently only own owner of the Gnosis Safe
@@ -405,7 +413,8 @@ function DappEstate(props) {
         const oldOwner = owner;
         // const newOwner = owner;  // TODO: pull newOwner from recovery form state
         const newOwner = gnosisRecoveryFormNewOwner;
-        const swapOwnerData = ownerModuleInterface.functions.swapOwner.encode([prevOwner, oldOwner, newOwner]);
+        // const swapOwnerData = ownerModuleInterface.functions.swapOwner.encode([prevOwner, oldOwner, newOwner]);
+        const swapOwnerData = ownerModuleInterface.encodeFunctionData("swapOwner", [prevOwner, oldOwner, newOwner]);
         console.log("swapOwnerData: ", swapOwnerData);
         const dataHash = await estateContract.getDataHash(swapOwnerData);
         console.log("dataHash: ", dataHash);
@@ -468,7 +477,7 @@ function DappEstate(props) {
         event.preventDefault();
         const provider = new ethers.providers.Web3Provider(wallet.ethereum);
         const signer = provider.getSigner(0);
-        const estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
+        const estateContract = new ethers.Contract(estateAddress, alfredEstateAbi, signer);
 
         // NOTE: This might only the first time the Estate is recovered. Subsequent recoveries will use a different
         //       old owner address and incorrectly calculate the Gnosis Safe address.  The Gnosis Safe address is
@@ -483,11 +492,12 @@ function DappEstate(props) {
         // console.log("cpk", cpk);
 
         // Prepare calldata for multi-transaction call to Gnosis Safe through Contract Proxy Kit
-        const boydInterface = new ethers.utils.Interface(bringOutYourDeadAbi);
+        const estateInterface = new ethers.utils.Interface(alfredEstateAbi);
         // Transfer ownership to self
-        const transferOwnershipData = boydInterface.functions.transferOwnership.encode([wallet.account]);
+        // const transferOwnershipData = estateInterface.functions.transferOwnership.encode([wallet.account]);
+        const transferOwnershipData = estateInterface.encodeFunctionData("transferOwnership", [wallet.account]);
         // Check-in as alive
-        const checkinData = boydInterface.functions.imNotDeadYet.encode([]);
+        const checkinData = estateInterface.encodeFunctionData("imNotDeadYet", []);
 
         let txs = [
             {
@@ -532,7 +542,7 @@ function DappEstate(props) {
         event.preventDefault();
         const provider = new ethers.providers.Web3Provider(wallet.ethereum);
         const signer = provider.getSigner(0);
-        const estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
+        const estateContract = new ethers.Contract(estateAddress, alfredEstateAbi, signer);
 
         try {
             await estateContract.bringOutYourDead();
@@ -560,7 +570,7 @@ function DappEstate(props) {
         event.preventDefault();
         const provider = new ethers.providers.Web3Provider(wallet.ethereum);
         const signer = provider.getSigner(0);
-        const estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
+        const estateContract = new ethers.Contract(estateAddress, alfredEstateAbi, signer);
 
         try {
             await estateContract.imNotDeadYet();
@@ -589,7 +599,7 @@ function DappEstate(props) {
         const signer = provider.getSigner(0);
         let estateContract;
         try {
-            estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
+            estateContract = new ethers.Contract(estateAddress, alfredEstateAbi, signer);
         } catch (e) {
             console.log("ERROR while refreshing beneficiaries");
             console.log(e);
@@ -620,7 +630,7 @@ function DappEstate(props) {
     async function refreshAssets(_beneficiarySelfShares) {
         const provider = new ethers.providers.Web3Provider(wallet.ethereum);
         const signer = provider.getSigner(0);
-        let estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
+        let estateContract = new ethers.Contract(estateAddress, alfredEstateAbi, signer);
         // Determine tracked assets
         let _trackedTokens = [];
         let assetAddress = null;
@@ -735,7 +745,7 @@ function DappEstate(props) {
             let estateContract;
             let _gnosisSafe = null;
             try {
-                estateContract = new ethers.Contract(estateAddress, bringOutYourDeadAbi, signer);
+                estateContract = new ethers.Contract(estateAddress, alfredEstateAbi, signer);
                 console.log(estateContract);
                 let _owner = await estateContract.owner();
                 setOwner(_owner);
@@ -804,7 +814,7 @@ function DappEstate(props) {
 
             // Determine current on-chain timestamp for comparing to dead man's switch
             const block = await provider.getBlock();
-            const blockTimestamp = ethers.utils.bigNumberify(block.timestamp);
+            const blockTimestamp = ethers.BigNumber.from(block.timestamp);
 
             setBlockchainTimestamp(blockTimestamp);
 
@@ -844,7 +854,7 @@ function DappEstate(props) {
             fetchData();
         }
 
-    }, [wallet.connected, wallet.account, estateAddress]);
+    }, [wallet, estateAddress]);
 
     return (
         <EthereumDapp>
@@ -922,19 +932,24 @@ function DappEstate(props) {
                         </div>
                         <div>
                             Life Signs:
-                            {(liveliness === 0 && deadMansSwitchLastCheckin.add(deadMansSwitchCheckinSeconds).gt(blockchainTimestamp)) && (
+                            {(liveliness === LIFESIGNS.Alive && (!isDeadMansSwitchEnabled || deadMansSwitchLastCheckin.add(deadMansSwitchCheckinSeconds).gt(blockchainTimestamp))) && (
                                 <Badge pill variant="success" className="badge-outline-success p-2 m-1">
                                     Alive
                                 </Badge>
                             )}
-                            {(liveliness === 2 || (liveliness === 0 && deadMansSwitchLastCheckin.add(deadMansSwitchCheckinSeconds).lte(blockchainTimestamp)) ) && (
+                            {(liveliness === LIFESIGNS.Uncertain || (liveliness === LIFESIGNS.Alive && deadMansSwitchLastCheckin.gt(0) && deadMansSwitchLastCheckin.add(deadMansSwitchCheckinSeconds).lte(blockchainTimestamp)) ) && (
                                 <Badge pill variant="warning" className="badge-outline-warning p-2 m-1">
                                     Uncertain
                                 </Badge>
                             )}
-                            {liveliness === 1 && (
+                            {liveliness === LIFESIGNS.Dead && (
                                 <Badge pill variant="danger" className="badge-outline-danger p-2 m-1">
                                     Dead
+                                </Badge>
+                            )}
+                            {liveliness === LIFESIGNS.SimulatedDead && (
+                                <Badge pill variant="danger" className="badge-outline-danger p-2 m-1">
+                                    SIMULATED Dead
                                 </Badge>
                             )}
                         </div>
@@ -961,7 +976,7 @@ function DappEstate(props) {
                     </SimpleCard>
 
                     {/* TODO: Display dead man's switch status but not controls to non-owners */}
-                    {(liveliness !== 1 && (isOwner || isDeadMansSwitchEnabled)) && (
+                    {(liveliness !== LIFESIGNS.Dead && (isOwner || isDeadMansSwitchEnabled)) && (
                         <div className="row">
                             <div className="col-lg-6">
                                 <SimpleCard title="Dead Man's Switch" className="mb-4">
@@ -1034,7 +1049,7 @@ function DappEstate(props) {
                                         </div>
                                     )}
                                     {/* Display when owner is alive but past due to check in to dead man switch and user is executor or beneficiary */}
-                                    {(liveliness === 0 && deadMansSwitchLastCheckin.add(deadMansSwitchCheckinSeconds).lte(blockchainTimestamp) && (executor === wallet.account || beneficiarySelfShares > 0)) && (
+                                    {(liveliness === LIFESIGNS.Alive && deadMansSwitchLastCheckin.add(deadMansSwitchCheckinSeconds).lte(blockchainTimestamp) && (executor === wallet.account || beneficiarySelfShares > 0)) && (
                                         <div className="row">
                                             <div className="col-lg-12 col-md-12 col-sm-12">
                                                 <Button
@@ -1100,7 +1115,7 @@ function DappEstate(props) {
                     )}
 
                     {/* Only display this to Executors and Beneficiaries while Owner is still alive and Recovery Module is enabled */}
-                    {((executor === wallet.account || beneficiarySelfShares > 0) && liveliness === 0 && isGnosisSafeRecoveryEnabled) && (
+                    {((executor === wallet.account || beneficiarySelfShares > 0) && liveliness === LIFESIGNS.Alive && isGnosisSafeRecoveryEnabled) && (
                         <SimpleCard title="Recover Access to Estate and Gnosis Safe" className="mb-4">
                             <div>
                                 If the owner of this estate has lost access to their Ethereum wallet, you can assist them with recovering control of their Gnosis Safe and their Estate.
@@ -1133,7 +1148,7 @@ function DappEstate(props) {
                     )}
 
                     {/* Only display this to GnosisSafe owner when they differ from estate Owner and the owner is still alive */}
-                    { (isGnosisSafeOwner && !isOwner && liveliness === 0) && (
+                    { (isGnosisSafeOwner && !isOwner && liveliness === LIFESIGNS.Alive) && (
                         <SimpleCard title="Finish Estate Recovery In Progress" className="mb-4">
                             <div>
                                 Your Estate recovery is almost complete.  You have successfully regained control of your Gnosis Safe.
@@ -1148,7 +1163,7 @@ function DappEstate(props) {
                     )}
 
                     {/* Only display this to Executors after Death has been established */}
-                    { (executor === wallet.account && liveliness === 1) && (
+                    { (executor === wallet.account && (liveliness === LIFESIGNS.Dead || liveliness === LIFESIGNS.SimulatedDead)) && (
                         <SimpleCard title="Distribute Inheritance to Beneficiaries" className="mb-4">
                             {assets.length === 0 ? (
                                 <div className="loader-bubble loader-bubble-primary m-5" />
@@ -1207,7 +1222,7 @@ function DappEstate(props) {
                     )}
 
                     {/* Only display this to Beneficiaries after Death has been established */}
-                    {(beneficiarySelfShares > 0 && liveliness === 1) && (
+                    {(beneficiarySelfShares > 0 && (liveliness === LIFESIGNS.Dead || liveliness === LIFESIGNS.SimulatedDead)) && (
                         <SimpleCard title="Claim My Share of Inheritance" className="mb-4">
                             {inheritance === null ? (
                                 <div className="loader-bubble loader-bubble-primary m-5" />
@@ -1301,7 +1316,7 @@ function DappEstate(props) {
                                                             <th>#</th>
                                                             <th>Address</th>
                                                             <th>Shares</th>
-                                                            {(isOwner || (wallet.address === executor && liveliness === 2)) && (
+                                                            {(isOwner || (wallet.address === executor && (liveliness === LIFESIGNS.Dead || liveliness === LIFESIGNS.SimulatedDead))) && (
                                                                 <th>Action</th>
                                                             )}
                                                         </tr>
@@ -1321,18 +1336,18 @@ function DappEstate(props) {
                                                                 <td>
                                                                     {beneficiary.shares}
                                                                 </td>
-                                                                {(isOwner || (wallet.address === executor && liveliness === 2)) && (
+                                                                {(isOwner || (wallet.address === executor && (liveliness === LIFESIGNS.Dead || liveliness === LIFESIGNS.SimulatedDead))) && (
                                                                     <td>
-                                                                                <span className="cursor-pointer text-success mr-2">
-                                                                                    <i className="nav-icon i-Pen-2 font-weight-bold"
-                                                                                       title="Edit beneficiary"
-                                                                                       onClick={() => setShowTodo(true)} />
-                                                                                </span>
+                                                                        <span className="cursor-pointer text-success mr-2">
+                                                                            <i className="nav-icon i-Pen-2 font-weight-bold"
+                                                                               title="Edit beneficiary"
+                                                                               onClick={() => setShowTodo(true)} />
+                                                                        </span>
                                                                         <span className="cursor-pointer text-danger mr-2">
-                                                                                    <i className="nav-icon i-Close-Window font-weight-bold"
-                                                                                       title="Remove beneficiary"
-                                                                                       onClick={() => setShowTodo(true)} />
-                                                                                </span>
+                                                                            <i className="nav-icon i-Close-Window font-weight-bold"
+                                                                               title="Remove beneficiary"
+                                                                               onClick={() => setShowTodo(true)} />
+                                                                        </span>
                                                                     </td>
                                                                 )}
                                                             </tr>
@@ -1418,7 +1433,7 @@ function DappEstate(props) {
                                                                    title="Send"
                                                                    onClick={() => setShowTodo(true)} />
                                                             </span>
-                                                            {asset.address != ethers.constants.AddressZero && (
+                                                            {asset.address !== ethers.constants.AddressZero && (
                                                                 <Fragment>
                                                                     <span
                                                                         className="cursor-pointer text-danger mr-2">

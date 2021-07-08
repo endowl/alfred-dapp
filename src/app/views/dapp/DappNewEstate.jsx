@@ -4,18 +4,18 @@ import { useWallet } from "use-wallet";
 import EthereumDapp from "./EthereumDapp";
 import {Alert, Button} from "react-bootstrap";
 import { ethers } from 'ethers';
-import bringOutYourDeadFactoryAbi from "../../../abi/bringOutYourDeadFactoryAbi";
-import bringOutYourDeadAbi from "../../../abi/bringOutYourDeadAbi";
+import alfredEstateFactoryAbi from "../../../abi/alfredEstateFactoryAbi";
+import alfredEstateAbi from "../../../abi/alfredEstateAbi";
 import LinkEtherscanTx from './LinkEtherscanTx';
 import { Link } from 'react-router-dom';
 import localStorageService from "../../services/localStorageService";
 const CPK = require('contract-proxy-kit');
 
 // TODO: Move this to a config file and support multiple networks automatically
-// const boydFactoryAddress = "0xDEAD78Ed0A13909CB8F6919E32308515373e6d2d";
-// const boydFactoryAddress = "0x0bBc6D455611718aFA0Db939d1C41ABe283ECc8F";  // Ropsten
-// const boydFactoryAddress = "0x5Ca258619d7Ea8A81c2f78C25B8AD85151F33CBD";  // Kovan v0.2
-const boydFactoryAddress = "0xDEAD120FB5Aad12a3D3cAd140C66dad2A6739422";  // v0.3.1 Kovan + Mainnet
+// const estateFactoryAddress = "0xDEAD78Ed0A13909CB8F6919E32308515373e6d2d";
+// const estateFactoryAddress = "0x0bBc6D455611718aFA0Db939d1C41ABe283ECc8F";  // Ropsten
+// const estateFactoryAddress = "0x5Ca258619d7Ea8A81c2f78C25B8AD85151F33CBD";  // Kovan v0.2
+const estateFactoryAddress = "0xDEAD120FB5Aad12a3D3cAd140C66dad2A6739422";  // v0.3.1 Kovan + Mainnet
 
 function NewEstateForm(props) {
     const wallet = useWallet();
@@ -39,7 +39,7 @@ function NewEstateForm(props) {
         // Use Gnosis Contract Proxy Kit (CPK) to create a Gnosis Safe
         // Use TX batching to make a single call to Gnosis Safe which:
         //       - Creates the Gnosis Safe (automatic on first TX)
-        //       - Creates Alfred BOYD Estate contract
+        //       - Creates Alfred estate Estate contract
         //       - Set's wallet address as owner of Estate contract
 
         // TODO: Set estate as recovery option for Gnosis Safe
@@ -55,28 +55,30 @@ function NewEstateForm(props) {
         const signer = provider.getSigner(0);
 
         // Bring Out Your Dead (Alfred Estate) Factory
-        let boydFactory = new ethers.Contract(boydFactoryAddress, bringOutYourDeadFactoryAbi, signer);
+        let estateFactory = new ethers.Contract(estateFactoryAddress, alfredEstateFactoryAbi, signer);
 
         // Gnosis Contract Proxy Kit
         const cpk = await CPK.create( { ethers, signer: signer } );
 
-        const expectedEstateAddress = await boydFactory.getEstateAddress(cpk.address, props.salt);
+        const expectedEstateAddress = await estateFactory.getEstateAddress(cpk.address, props.salt);
         console.log("Expected estate address: ", expectedEstateAddress);
 
         // Prepare calldata for multi-transaction call to Gnosis Safe by way of Contract Proxy Kit
-        const boydFactoryInterface = new ethers.utils.Interface(bringOutYourDeadFactoryAbi);
-        const boydInterface = new ethers.utils.Interface(bringOutYourDeadAbi);
+        const estateFactoryInterface = new ethers.utils.Interface(alfredEstateFactoryAbi);
+        const estateInterface = new ethers.utils.Interface(alfredEstateAbi);
 
 
-        let newEstateData = boydFactoryInterface.functions.newEstate.encode([oracleParam, executorParam, props.salt]);
-        // TODO: Add call to boydInterface.functions.setupGnosisSafe.encode(.....)
-        let gnosisSetupData = boydInterface.functions.gnosisSafeSetup.encode([]);
-        let transferOwnershipData = boydInterface.functions.transferOwnership.encode([wallet.account]);
+        // let newEstateData = estateFactoryInterface.functions.newEstate.encode([oracleParam, executorParam, props.salt]);
+        // let gnosisSetupData = estateInterface.functions.gnosisSafeSetup.encode([]);
+        // let transferOwnershipData = estateInterface.functions.transferOwnership.encode([wallet.account]);
+        let newEstateData = estateFactoryInterface.encodeFunctionData("newEstate", [oracleParam, executorParam, props.salt]);
+        let gnosisSetupData = estateInterface.encodeFunctionData("gnosisSafeSetup", []);
+        let transferOwnershipData = estateInterface.encodeFunctionData("transferOwnership", [wallet.account]);
 
         const txs = [
             {
                 operation: CPK.CALL,
-                to: boydFactoryAddress,
+                to: estateFactoryAddress,
                 value: 0,
                 data: newEstateData
             },
@@ -95,10 +97,10 @@ function NewEstateForm(props) {
         ];
 
         // Listen for estate creation event
-        let filter = boydFactory.filters.estateCreated(null, cpk.address);
-        boydFactory.on(filter, async (fromAddress, toAddress, value, event) => {
+        let filter = estateFactory.filters.estateCreated(null, cpk.address);
+        estateFactory.on(filter, async (fromAddress, toAddress, value, event) => {
             console.log('Estate created!');
-            let address = await boydFactory.getEstateAddress(cpk.address, props.salt);
+            let address = await estateFactory.getEstateAddress(cpk.address, props.salt);
             console.log('Estate address', address);
             // TODO: Sanity check address matches expected address
             setEstateAddress(address);
@@ -125,8 +127,8 @@ function NewEstateForm(props) {
         let tx;
         try {
             // Prompt user's wallet to send transaction to factory contract
-            // tx = await boydFactory.newEstate(oracleParam, executorParam);
-            tx = await boydFactory.newEstate(oracleParam, executorParam, salt, {gasLimit: 5000000});
+            // tx = await estateFactory.newEstate(oracleParam, executorParam);
+            tx = await estateFactory.newEstate(oracleParam, executorParam, salt, {gasLimit: 5000000});
 
 
         } catch(e) {
@@ -213,7 +215,7 @@ function NewEstateForm(props) {
                 </Alert.Heading>
                 <p>
                     {/* TODO: Auto select chainID */}
-                    Your transaction has been sent and is pending inclusion in the blockchain. You may <LinkEtherscanTx txHash={txHash} chainId="1">follow the transaction on Etherscan.</LinkEtherscanTx>
+                    Your transaction has been sent and is pending inclusion in the blockchain. You may <LinkEtherscanTx txHash={txHash} chainId="42">follow the transaction on Etherscan.</LinkEtherscanTx>
                 </p>
             </Alert>
             <Alert variant="success" show={status === statuses.SUCCESS}>
@@ -264,7 +266,7 @@ function DappNewEstate(props) {
                 const signer = provider.getSigner(0);
 
                 // Bring Out Your Dead (Alfred Estate) Factory
-                let boydFactory = new ethers.Contract(boydFactoryAddress, bringOutYourDeadFactoryAbi, signer);
+                let estateFactory = new ethers.Contract(estateFactoryAddress, alfredEstateFactoryAbi, signer);
 
                 // Gnosis Contract Proxy Kit
                 const cpk = await CPK.create({ethers, signer: signer});
@@ -274,7 +276,7 @@ function DappNewEstate(props) {
                 let estatesDetected = [];
                 while(true) {
                     console.log("Checking for estate with salt nonce: ", salt);
-                    const expectedEstateAddress = await boydFactory.getEstateAddress(cpk.address, salt);
+                    const expectedEstateAddress = await estateFactory.getEstateAddress(cpk.address, salt);
                     // Check if the estate exists!
                     let code = await provider.getCode(expectedEstateAddress);
                     if(code !== '0x') {
@@ -289,7 +291,7 @@ function DappNewEstate(props) {
             }
         }
         fetchData();
-    }, [wallet.connected, wallet.account]);
+    }, [wallet]);
 
     // TODO: Revisit breadcrumbs flow
 
